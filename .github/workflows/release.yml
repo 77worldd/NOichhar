@@ -48,7 +48,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: signing
-          key: noichhar-official-release-keystore-${{ runner.os }}-v2
+          key: noichhar-official-release-keystore-${{ runner.os }}-v3
 
       - name: Create official signing key on first run
         if: steps.keystore-cache.outputs.cache-hit != 'true'
@@ -107,7 +107,6 @@ jobs:
             --ks signing/release.p12 \
             --ks-key-alias noichhar \
             --ks-pass file:signing/password.txt \
-            --key-pass file:signing/password.txt \
             --min-sdk-version 24 \
             --out "NOichhar-${VERSION}.apk" \
             "$RUNNER_TEMP/noichhar-aligned.apk"
