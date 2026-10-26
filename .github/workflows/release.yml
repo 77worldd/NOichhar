@@ -48,7 +48,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: signing
-          key: noichhar-official-release-keystore-${{ runner.os }}-v1
+          key: noichhar-official-release-keystore-${{ runner.os }}-v2
 
       - name: Create official signing key on first run
         if: steps.keystore-cache.outputs.cache-hit != 'true'
@@ -56,7 +56,7 @@ jobs:
           set -euo pipefail
           mkdir -p signing
           PASSWORD="$(openssl rand -hex 24)"
-          printf '%s' "$PASSWORD" > signing/password.txt
+          printf '%s\n' "$PASSWORD" > signing/password.txt
           keytool -genkeypair \
             -alias noichhar \
             -keyalg RSA \
