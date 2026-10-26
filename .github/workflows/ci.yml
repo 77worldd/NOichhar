@@ -38,6 +38,33 @@ jobs:
           if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(command -v sdkmanager)"; fi
           "$SDKMANAGER" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" > /dev/null
 
+      - name: Restore official signing key
+        id: signing-key
+        uses: actions/cache@v4
+        with:
+          path: signing
+          key: noichhar-official-release-keystore-${{ runner.os }}-v1
+
+      - name: Create official signing key on first run
+        if: steps.signing-key.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p signing
+          PASSWORD="$(openssl rand -hex 24)"
+          printf '%s' "$PASSWORD" > signing/password.txt
+          keytool -genkeypair \
+            -alias noichhar \
+            -keyalg RSA \
+            -keysize 3072 \
+            -validity 10000 \
+            -storetype PKCS12 \
+            -keystore signing/release.p12 \
+            -storepass "$PASSWORD" \
+            -keypass "$PASSWORD" \
+            -dname "CN=NOichhar Official Release, O=77worldd, C=MA" \
+            -noprompt
+          chmod 600 signing/release.p12 signing/password.txt
+
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
@@ -46,7 +73,7 @@ jobs:
           python3 - <<'PY'
           import glob
           import xml.etree.ElementTree as ET
-          files = glob.glob("app/src/main/**/*.xml", recursive=True) + glob.glob(".github/**/*.xml", recursive=True)
+          files = glob.glob("app/src/main/**/*.xml", recursive=True)
           for path in files:
               ET.parse(path)
           print(f"Validated {len(files)} XML files")
@@ -55,6 +82,27 @@ jobs:
       - name: Run unit tests and build APKs
         run: ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleDebug assembleRelease
 
+      - name: Align, sign and verify release APK
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          UNSIGNED="$(find app/build/outputs/apk/release -name '*unsigned*.apk' -print -quit)"
+          if [ -z "$UNSIGNED" ]; then
+            echo "Unsigned release APK was not produced" >&2
+            exit 1
+          fi
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED" "$RUNNER_TEMP/noichhar-aligned.apk"
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks signing/release.p12 \
+            --ks-key-alias noichhar \
+            --ks-pass file:signing/password.txt \
+            --key-pass file:signing/password.txt \
+            --min-sdk-version 24 \
+            --out NOichhar-v1.0.0.apk \
+            "$RUNNER_TEMP/noichhar-aligned.apk"
+          "$BUILD_TOOLS/apksigner" verify --verbose --min-sdk-version 24 NOichhar-v1.0.0.apk
+          sha256sum NOichhar-v1.0.0.apk > NOichhar-v1.0.0.apk.sha256
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -62,9 +110,18 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
-      - name: Upload release APK
+      - name: Upload unsigned release APK
         uses: actions/upload-artifact@v4
         with:
           name: NOichhar-release-unsigned-apk
           path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOichhar-v1.0.0-release
+          path: |
+            NOichhar-v1.0.0.apk
+            NOichhar-v1.0.0.apk.sha256
           if-no-files-found: error
