@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import com.noichhar.app.NOichharApp
 import com.noichhar.app.database.entity.DnsLog
@@ -37,7 +38,7 @@ class DnsViewModel(application: Application) : AndroidViewModel(application) {
     val customDnsName: LiveData<String> = _customDnsName
 
     private val _searchQuery = MutableLiveData("")
-    val filteredLogs: LiveData<List<DnsLog>> = androidx.lifecycle.Transformations.switchMap(_searchQuery) { query ->
+    val filteredLogs: LiveData<List<DnsLog>> = _searchQuery.switchMap { query: String ->
         if (query.isBlank()) database.dnsLogDao().getRecentLogs() else database.dnsLogDao().searchLogs(query)
     }
 
