@@ -103,27 +103,25 @@ class PacketInterceptor(
 
         var blocked = !firewallDecision.allowed
         var blockReason = firewallDecision.reason
-        var response: ByteArray? = null
-
-        if (blocked) {
-            response = DnsPacketParser.createNxDomainResponse(dnsPayload)
+        val response: ByteArray = if (blocked) {
+            DnsPacketParser.createNxDomainResponse(dnsPayload)
         } else if (domainBlocker.isBlocked(domain)) {
             blocked = true
             blockReason = domainBlocker.getBlockReason(domain) ?: "Blocklist rule"
-            response = DnsPacketParser.createNxDomainResponse(dnsPayload)
+            DnsPacketParser.createNxDomainResponse(dnsPayload)
         } else {
             val cached = dnsCache.get(domain, question.type)
             if (cached != null) {
-                response = DnsPacketParser.rewriteTransactionId(cached, dnsPayload)
+                DnsPacketParser.rewriteTransactionId(cached, dnsPayload)
             } else {
-                response = resolveDns(dnsPayload)?.let { upstream ->
+                resolveDns(dnsPayload)?.let { upstream ->
                     dnsCache.put(domain, question.type, upstream)
                     DnsPacketParser.rewriteTransactionId(upstream, dnsPayload)
                 } ?: DnsPacketParser.createServFailResponse(dnsPayload)
             }
         }
 
-        if (response == null || response.isEmpty()) return
+        if (response.isEmpty()) return
         var finalResponse = response
         if (20 + 8 + finalResponse.size > Constants.VPN_MTU) {
             finalResponse = DnsPacketParser.createServFailResponse(dnsPayload)
