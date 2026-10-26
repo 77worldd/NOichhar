@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-ci-${{ github.ref }}
@@ -102,6 +102,11 @@ jobs:
           "$BUILD_TOOLS/apksigner" verify --verbose --min-sdk-version 24 NOichhar-v1.0.0.apk
           sha256sum NOichhar-v1.0.0.apk > NOichhar-v1.0.0.apk.sha256
 
+      - name: Prepare official release notes
+        run: |
+          cp RELEASE_NOTES.md RELEASE_NOTES_GENERATED.md
+          printf '\n---\n\nSHA-256: `%s`\n' "$(cut -d' ' -f1 < NOichhar-v1.0.0.apk.sha256)" >> RELEASE_NOTES_GENERATED.md
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -124,3 +129,20 @@ jobs:
             NOichhar-v1.0.0.apk
             NOichhar-v1.0.0.apk.sha256
           if-no-files-found: error
+
+      - name: Publish official GitHub release
+        if: github.ref == 'refs/heads/arena/cee1b12c-noichhar' && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          target_commitish: ${{ github.sha }}
+          name: NOichhar v1.0.0
+          body_path: RELEASE_NOTES_GENERATED.md
+          files: |
+            NOichhar-v1.0.0.apk
+            NOichhar-v1.0.0.apk.sha256
+          draft: false
+          prerelease: false
+          make_latest: true
+          overwrite_files: true
+          fail_on_unmatched_files: true
