@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/surface"
+            app:title="@string/dns"
+            app:titleTextColor="@color/text_primary" />
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_private_dns_warning"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/CardStyle"
+            android:visibility="gone"
+            android:layout_marginTop="@dimen/margin_medium">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_private_dns_warning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/private_dns_warning"
+                    android:textSize="@dimen/text_body"
+                    android:textColor="@color/text_primary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_network_settings"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="@dimen/margin_small"
+                    android:text="@string/open_network_settings"
+                    style="@style/Widget.Material3.Button.TonalButton" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/CardStyle"
+            android:layout_marginTop="@dimen/margin_medium">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/dns_provider"
+                    android:textSize="@dimen/text_subtitle"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <RadioGroup
+                    android:id="@+id/rg_dns_provider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/margin_small">
+
+                    <RadioButton
+                        android:id="@+id/rb_system_dns"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/system_dns" />
+
+                    <RadioButton
+                        android:id="@+id/rb_cloudflare"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="Cloudflare (1.1.1.1)"
+                        android:checked="true" />
+
+                    <RadioButton
+                        android:id="@+id/rb_google"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="Google (8.8.8.8)" />
+
+                    <RadioButton
+                        android:id="@+id/rb_quad9"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="Quad9 (9.9.9.9)" />
+
+                    <RadioButton
+                        android:id="@+id/rb_adguard"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="AdGuard DNS" />
+
+                    <RadioButton
+                        android:id="@+id/rb_custom"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/custom_dns" />
+                </RadioGroup>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_custom_dns"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:layout_marginTop="@dimen/margin_small"
+                    app:helperText="@string/custom_endpoint_helper"
+                    app:helperTextEnabled="true"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_custom_dns"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/custom_endpoint_doh_hint"
+                        android:inputType="textUri"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_custom_dns_dialog"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="@dimen/margin_small"
+                    android:text="@string/advanced_custom_dns"
+                    android:visibility="gone"
+                    style="@style/Widget.Material3.Button.TextButton" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/CardStyle"
+            android:layout_marginTop="@dimen/margin_small">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/protocol"
+                    android:textSize="@dimen/text_subtitle"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <RadioGroup
+                    android:id="@+id/rg_dns_protocol"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/margin_small">
+
+                    <RadioButton
+                        android:id="@+id/rb_doh"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/dns_over_https"
+                        android:checked="true" />
+
+                    <RadioButton
+                        android:id="@+id/rb_dot"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/dns_over_tls" />
+
+                    <RadioButton
+                        android:id="@+id/rb_plain"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/plain_dns" />
+                </RadioGroup>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_save_dns"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_margin="@dimen/margin_medium"
+            android:text="@string/save"
+            app:cornerRadius="@dimen/button_radius" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
