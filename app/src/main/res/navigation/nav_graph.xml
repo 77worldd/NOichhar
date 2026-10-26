@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.noichhar.app.ui.fragment.HomeFragment"
+        android:label="@string/home" />
+
+    <fragment
+        android:id="@+id/appsFragment"
+        android:name="com.noichhar.app.ui.fragment.AppsFragment"
+        android:label="@string/apps" />
+
+    <fragment
+        android:id="@+id/dnsFragment"
+        android:name="com.noichhar.app.ui.fragment.DnsFragment"
+        android:label="@string/dns" />
+
+    <fragment
+        android:id="@+id/firewallFragment"
+        android:name="com.noichhar.app.ui.fragment.FirewallFragment"
+        android:label="@string/firewall" />
+
+    <fragment
+        android:id="@+id/logsFragment"
+        android:name="com.noichhar.app.ui.fragment.LogsFragment"
+        android:label="@string/logs" />
+
+</navigation>

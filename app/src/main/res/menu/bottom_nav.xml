@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/homeFragment"
+        android:icon="@drawable/ic_shield"
+        android:title="@string/home" />
+    <item
+        android:id="@+id/appsFragment"
+        android:icon="@drawable/ic_apps"
+        android:title="@string/apps" />
+    <item
+        android:id="@+id/dnsFragment"
+        android:icon="@drawable/ic_dns"
+        android:title="@string/dns" />
+    <item
+        android:id="@+id/firewallFragment"
+        android:icon="@drawable/ic_firewall"
+        android:title="@string/firewall" />
+    <item
+        android:id="@+id/logsFragment"
+        android:icon="@drawable/ic_logs"
+        android:title="@string/logs" />
+</menu>
