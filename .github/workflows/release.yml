@@ -53,15 +53,17 @@ jobs:
       - name: Require the existing official signing key
         if: steps.keystore-cache.outputs.cache-hit != 'true'
         run: |
-          echo "Official signing key cache is unavailable; refusing to create an incompatible key." >&2
+          echo "::error::Official signing key cache is unavailable; refusing to create an incompatible key." >&2
           exit 1
 
       - name: Determine release version
         id: version
+        env:
+          DISPATCH_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ inputs.version }}"
+            VERSION="$DISPATCH_VERSION"
           else
             VERSION="${GITHUB_REF_NAME}"
           fi
@@ -78,7 +80,15 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run unit tests and build release APK
-        run: ./gradlew --no-daemon --stacktrace clean testDebugUnitTest assembleRelease
+        run: |
+          set +e
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace clean testDebugUnitTest assembleRelease 2>&1 | tee release-build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            python3 .github/workflows/report_failures.py release-build.log 'app/build/test-results/**/*.xml'
+            exit "$status"
+          fi
 
       - name: Align, sign and verify APK
         env:
@@ -118,7 +128,10 @@ jobs:
             | grep 'SHA-256 digest' | head -n 1 > "$RUNNER_TEMP/old-cert.txt"
           "$APKSIGNER" verify --print-certs "NOichhar-${VERSION}.apk" \
             | grep 'SHA-256 digest' | head -n 1 > "$RUNNER_TEMP/new-cert.txt"
-          diff -u "$RUNNER_TEMP/old-cert.txt" "$RUNNER_TEMP/new-cert.txt"
+          if ! diff -u "$RUNNER_TEMP/old-cert.txt" "$RUNNER_TEMP/new-cert.txt"; then
+            echo "::error::Signing certificate does not match v2.0.0; release not published."
+            exit 1
+          fi
           echo "Release signing certificate matches v2.0.0"
 
       - name: Upload signed release artifacts
