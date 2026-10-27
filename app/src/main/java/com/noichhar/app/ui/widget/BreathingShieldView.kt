@@ -19,6 +19,7 @@ class BreathingShieldView @JvmOverloads constructor(context: Context, attrs: Att
     private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
     private val logo = ContextCompat.getDrawable(context, R.drawable.ic_brand_mark)?.mutate()
     private var active = false
+    private var connecting = false
     private var phase = 0f
     private var animator: ValueAnimator? = null
 
@@ -29,14 +30,22 @@ class BreathingShieldView @JvmOverloads constructor(context: Context, attrs: Att
         invalidate()
     }
 
+    /** Slow, low-contrast pulse used while the tunnel is being negotiated. */
+    fun setConnecting(value: Boolean) {
+        if (connecting == value) return
+        connecting = value
+        updateAnimation()
+        invalidate()
+    }
+
     override fun onAttachedToWindow() { super.onAttachedToWindow(); updateAnimation() }
     override fun onDetachedFromWindow() { animator?.cancel(); animator = null; super.onDetachedFromWindow() }
 
     private fun updateAnimation() {
         animator?.cancel(); animator = null
-        if (!active || !isAttachedToWindow) { phase = 0f; return }
+        if ((!active && !connecting) || !isAttachedToWindow) { phase = 0f; return }
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 2800
+            duration = if (active) 2800L else 1200L
             interpolator = LinearInterpolator()
             repeatCount = ValueAnimator.INFINITE
             addUpdateListener { phase = it.animatedValue as Float; invalidate() }
@@ -48,7 +57,7 @@ class BreathingShieldView @JvmOverloads constructor(context: Context, attrs: Att
         super.onDraw(canvas)
         val cx = width / 2f; val cy = height / 2f
         val r = minOf(width, height) * 0.25f
-        val color = ContextCompat.getColor(context, if (active) R.color.text_primary else R.color.text_dim)
+        val color = ContextCompat.getColor(context, if (active || connecting) R.color.text_primary else R.color.text_dim)
         if (active) {
             glow.shader = RadialGradient(cx, cy, r * 1.8f, 0x22FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
             canvas.drawCircle(cx, cy, r * 1.8f, glow)
@@ -57,6 +66,14 @@ class BreathingShieldView @JvmOverloads constructor(context: Context, attrs: Att
                 stroke.color = color; stroke.alpha = ((1f - p) * 150).toInt()
                 stroke.strokeWidth = resources.displayMetrics.density * if (i == 0) 2f else 1f
                 canvas.drawCircle(cx, cy, r * (1.05f + p * 0.9f), stroke)
+            }
+        } else if (connecting) {
+            stroke.color = color
+            for (i in 0..1) {
+                val p = (phase + i * 0.5f) % 1f
+                stroke.alpha = ((1f - p) * 70).toInt()
+                stroke.strokeWidth = resources.displayMetrics.density
+                canvas.drawCircle(cx, cy, r * (1.05f + p * 0.55f), stroke)
             }
         } else {
             stroke.color = color; stroke.alpha = 110; stroke.strokeWidth = resources.displayMetrics.density

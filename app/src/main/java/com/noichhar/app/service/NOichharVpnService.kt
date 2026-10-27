@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -77,6 +78,24 @@ class NOichharVpnService : VpnService() {
         val isActive: Boolean
             get() = instance?.isRunning == true
 
+        /**
+         * Re-publishes the real service state into [VpnStateStore]. Called when the
+         * home screen becomes visible so a missed transition can never leave stale UI.
+         */
+        fun syncConnectionState() {
+            // Without a live instance there is nothing authoritative to report: the
+            // start intent may still be in flight, so keep the current state instead
+            // of flickering back to ACTIVATE between the tap and the handshake.
+            val service = instance ?: return
+            VpnStateStore.set(
+                when {
+                    service.isRunning -> VpnConnectionState.ACTIVE
+                    service.starting -> VpnConnectionState.CONNECTING
+                    else -> VpnConnectionState.INACTIVE
+                }
+            )
+        }
+
         val advancedHostFilteringAvailable: Boolean
             get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
     }
@@ -122,12 +141,20 @@ class NOichharVpnService : VpnService() {
             starting = true
             ++lifecycleGeneration
         }
+        // Published synchronously from onStartCommand, so the toggle switches to the
+        // connecting state on the same frame as the tap instead of after the handshake.
+        VpnStateStore.set(VpnConnectionState.CONNECTING)
         scope.launch {
             vpnMutex.withLock {
                 try {
-                    blocklistManager.initialize()
-                    firewallManager.refreshAppList()
-                    loadCounters()
+                    // Rules, counters and the app inventory are independent local reads.
+                    // Loading them concurrently removes the serial wait that used to add
+                    // hundreds of milliseconds before the tunnel interface was created.
+                    coroutineScope {
+                        launch { blocklistManager.initialize() }
+                        launch { firewallManager.refreshAppList() }
+                        launch { loadCounters() }
+                    }
                     synchronized(stateLock) {
                         if (generation != lifecycleGeneration || !starting) return@withLock
                         startAdvancedComponents()
@@ -154,7 +181,9 @@ class NOichharVpnService : VpnService() {
                         isRunning = true
                         starting = false
                         refreshNotification()
+                        VpnStateStore.set(VpnConnectionState.ACTIVE)
                         broadcastVpnState(true)
+                        warmShieldCache()
                         Logger.i("VPN started with ${activeBlockedIps.size} shielded IP routes")
                     }
                 } catch (e: Exception) {
@@ -205,7 +234,13 @@ class NOichharVpnService : VpnService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        activeBlockedIps = networkShield.refreshIfStale(forceShieldRefresh)
+        activeBlockedIps = if (forceShieldRefresh) {
+            networkShield.refreshIfStale(true)
+        } else {
+            // Never block the handshake on DNS resolution of shield domains; the
+            // cached route set is applied instantly and refreshed afterwards.
+            networkShield.cachedRoutes()
+        }
         val builder = Builder()
             .setSession(getString(R.string.app_name))
             .setConfigureIntent(configureIntent)
@@ -238,6 +273,25 @@ class NOichharVpnService : VpnService() {
     } catch (e: Exception) {
         Logger.e("Failed to establish VPN", e)
         null
+    }
+
+    /**
+     * Refreshes the shield route cache once the tunnel is already live. The UI has
+     * reported protection by this point, so a slow DNS resolve costs nothing.
+     */
+    private fun warmShieldCache() {
+        if (!NOichharApp.instance.preferenceManager.advancedProtection) return
+        scope.launch {
+            val applied = activeBlockedIps
+            val refreshed = runCatching { networkShield.refreshIfStale() }.getOrDefault(emptySet())
+            if (!isRunning || refreshed.isEmpty() || refreshed == applied) return@launch
+            // Cold first activation had no cached routes: apply them now, while the
+            // tunnel has not started carrying user traffic yet.
+            if (applied.isEmpty()) {
+                Logger.i("Network shield warmed with ${refreshed.size} routes")
+                reloadConfiguration()
+            }
+        }
     }
 
     private fun startPacketInterceptor(descriptor: ParcelFileDescriptor) {
@@ -383,6 +437,7 @@ class NOichharVpnService : VpnService() {
         lifecycleGeneration++
         starting = false
         isRunning = false
+        VpnStateStore.set(VpnConnectionState.INACTIVE)
         NOichharApp.instance.preferenceManager.vpnEnabled = false
 
         packetInterceptor?.stop()

@@ -1,20 +1,32 @@
-# NOichhar v2.1.0 — Obsidian Minimalism
+# NOichhar v2.2.1 — Monochrome + Instant Activation
 
-A raven-branded, dark-first redesign with real request statistics and a larger, safer blocklist engine. The package remains `com.noichhar.app`; no root is required.
+A black & white redesign with a faster, fully responsive protection toggle. The package remains `com.noichhar.app`; no root is required.
 
-## What's new
+## What's new in v2.2.1
 
-- Breathing raven shield, glass-style cards, device-wide throughput waveform, real 24-hour activity heatmap and a floating five-tab navigation bar.
-- A Stats screen with 1-hour, 24-hour and seven-day filtered-request rankings and a radial chart, plus optional per-UID network-usage totals from Android.
-- RPN controls for DNS filtering and app rules, custom rules and allowlists, list updates, app management and logs. Settings and DNS options persist and apply to the running VPN.
-- Port-53 TCP DNS queries are reassembled across network packets, alongside the existing UDP path.
-- Version-2 Room database migration preserves existing data. DNS events are aggregated without domain or IP details for the heatmap and counters; detailed logging can be disabled separately.
-- A Bloom-filter-assisted, atomically updated rule index and bounded downloads supporting up to 500,000 block rules. If all downloads fail, the previous list is retained.
-- Adaptive and legacy launcher icons made from the supplied raven emblem.
+- **Instant activation.** Tapping ACTIVATE now flips the shield, badge and button immediately, shows a CONNECTING state while the tunnel is negotiated, and settles on PROTECTED the moment the service reports it — no more second tap to see the change.
+- **One-tap start.** When VPN consent already exists the confirmation dialog is skipped entirely, so protection starts on a single tap.
+- **Faster tunnel bring-up.** Local startup work (rules, counters, app inventory) now runs concurrently, and the tunnel no longer waits for shield DNS resolution before it can be established — the cached route set is used immediately and the cache is refreshed in the background.
+- **Cancel while connecting.** The toggle reads CANCEL during the handshake, so a slow network never leaves you tapping a button that looks unresponsive.
+- **Reliable UI state.** The home screen observes a process-wide connection state instead of relying only on a broadcast, so the status can never stay stale after a missed transition.
+
+## Monochrome design (v2.2.0)
+
+- Pure-black surfaces, `#141414` cards with subtle `#252525` borders, white primary text and grey secondary labels.
+- White primary buttons with black text, outlined secondary actions, white switches and radio indicators.
+- Greyscale charts: white/grey throughput waveform, six-step grey radial chart and a white-intensity activity heatmap.
+- No purple, teal, green or red accents remain anywhere in layouts, drawables or custom views.
+
+## Performance
+
+- DNS connection pooling with keep-alive for DoH lookups.
+- Concurrent 2,000-entry DNS cache with TTL respect.
+- Reused packet buffers and O(1) rule lookups in the interception path.
+- Parallel service start-up removes the serial wait before the tunnel handshake.
 
 ## Installation and usage
 
-Install the signed `NOichhar-v2.1.0.apk` over a compatible v2 release, open the app and accept the VPN prompt. Grant **Usage Access** from the Stats or Configure screen for optional per-app bandwidth. Android may delay or deny some mobile usage data; the app labels unavailable data rather than inventing values.
+Install the signed `NOichhar-v2.2.1.apk` over a compatible v2 release, open the app and accept the VPN prompt once. Grant **Usage Access** from the Stats or Configure screen for optional per-app bandwidth. Android may delay or deny some mobile usage data; the app labels unavailable data rather than inventing values.
 
 ## Important limitations
 
