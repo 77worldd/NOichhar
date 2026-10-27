@@ -49,7 +49,7 @@ class DnsPacketParserTest {
             domain = "cdn.example.com",
             type = DnsPacketParser.TYPE_A,
             ttlSeconds = 120,
-            rdata = byteArrayOf(93, 184.toByte(), 216, 34)
+            rdata = byteArrayOf(93.toByte(), 184.toByte(), 216.toByte(), 34.toByte())
         )
         assertEquals(120L, DnsPacketParser.getMinAnswerTtlSeconds(response))
         assertEquals("93.184.216.34", DnsPacketParser.parseFirstAnswerIp(response))
