@@ -31,12 +31,16 @@ jobs:
                       if not self.depth: self.chunks.append(''.join(self.current)); self.current=[]
               def handle_data(self, data):
                   if self.depth: self.current.append(data)
-          files = list(Path('reports').rglob('*VpnSmokeTest*.html'))
-          print('Reports:', [str(p) for p in files])
+          files = list(Path('reports').rglob('*'))
+          for path in files[:40]:
+              if path.is_file(): print(f'::error::FILE {path} ({path.stat().st_size} bytes)')
           for path in files:
-              parser=Pre(); parser.feed(path.read_text(errors='replace'))
-              for chunk in parser.chunks:
-                  for i in range(0, len(chunk), 3500):
-                      text=chunk[i:i+3500].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
-                      print(f'::error::{text}')
+              if path.is_file() and path.suffix == '.html':
+                  content=path.read_text(errors='replace')
+                  if 'VpnSmokeTest' in content or 'startsAndStopsTheRealLocalVpn' in content:
+                      parser=Pre(); parser.feed(content)
+                      text='\n'.join(parser.chunks) or content
+                      for i in range(0, min(len(text), 12000), 3500):
+                          safe=text[i:i+3500].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+                          print(f'::error::{path}: {safe}')
           PY
