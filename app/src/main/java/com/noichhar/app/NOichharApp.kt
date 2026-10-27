@@ -60,7 +60,7 @@ class NOichharApp : Application() {
     fun scheduleBlocklistUpdates() {
         val workManager = WorkManager.getInstance(this)
         if (!preferenceManager.autoUpdateBlocklists) {
-            workManager.cancelUniquePeriodicWork(Constants.WORK_BLOCKLIST_PERIODIC)
+            workManager.cancelUniqueWork(Constants.WORK_BLOCKLIST_PERIODIC)
             workManager.cancelUniqueWork(Constants.WORK_BLOCKLIST_IMMEDIATE)
             return
         }
