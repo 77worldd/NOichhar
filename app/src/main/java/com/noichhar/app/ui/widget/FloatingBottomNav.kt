@@ -15,6 +15,10 @@ class FloatingBottomNav @JvmOverloads constructor(context: Context, attrs: Attri
     defStyleAttr: Int = 0) : LinearLayout(context, attrs, defStyleAttr) {
     private val labels = listOf("Home", "Stats", "RPN", "Configure", "About")
     private val cells = mutableListOf<LinearLayout>()
+    private val iconIds = listOf(R.id.nav_home_icon, R.id.nav_stats_icon, R.id.nav_rpn_icon,
+        R.id.nav_configure_icon, R.id.nav_about_icon)
+    private val labelIds = listOf(R.id.nav_home_label, R.id.nav_stats_label, R.id.nav_rpn_label,
+        R.id.nav_configure_label, R.id.nav_about_label)
     private var selected = 0
     var onTabSelected: ((Int) -> Unit)? = null
     init {
@@ -39,8 +43,8 @@ class FloatingBottomNav @JvmOverloads constructor(context: Context, attrs: Attri
             cell.isSelected = chosen
             cell.background = if (chosen) ContextCompat.getDrawable(context, R.drawable.bg_segmented_pill_active) else null
             val color = ContextCompat.getColor(context, if (chosen) R.color.text_white else R.color.text_secondary)
-            cell.findViewById<ImageView>(R.id.nav_icon).setColorFilter(color)
-            cell.findViewById<TextView>(R.id.nav_label).setTextColor(color)
+            cell.findViewById<ImageView>(iconIds[i]).setColorFilter(color)
+            cell.findViewById<TextView>(labelIds[i]).setTextColor(color)
             cell.contentDescription = "${labels[i]}${if (chosen) ", selected" else ""}"
         }
     }
