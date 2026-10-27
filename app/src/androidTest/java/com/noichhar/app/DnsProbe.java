@@ -38,7 +38,10 @@ public final class DnsProbe {
             socket.connect(new InetSocketAddress(dns, 53), 8000);
             socket.setSoTimeout(8000);
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            out.writeShort(query.length); out.write(query); out.flush();
+            // Deliberately split the length prefix and message into separate
+            // writes to exercise stream reassembly rather than packet luck.
+            out.writeShort(query.length); out.flush(); Thread.sleep(75);
+            out.write(query); out.flush();
             DataInputStream in = new DataInputStream(socket.getInputStream());
             byte[] response = new byte[in.readUnsignedShort()];
             in.readFully(response);

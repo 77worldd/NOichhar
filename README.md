@@ -39,7 +39,7 @@ The local release output is `app/build/outputs/apk/release/app-release-unsigned.
 
 ## How protection works and its limits
 
-The VPN routes its virtual DNS address and a bounded set of protected IPv4 addresses into the local TUN interface. System DNS traffic sent to the VPN's virtual resolver is handled over UDP and TCP port 53; it is checked against the active rule snapshot, resolved through the selected upstream, cached, and answered locally. Most other traffic remains on the device's normal network path, so the app does not relay every packet through userspace.
+The VPN routes its virtual DNS address and a bounded set of protected IPv4 addresses into the local TUN interface. System DNS traffic sent to the VPN's virtual resolver is handled over UDP and TCP port 53 (including fragmented TCP queries); it is checked against the active rule snapshot, resolved through the selected upstream, cached, and answered locally. Most other traffic remains on the device's normal network path, so the app does not relay every packet through userspace.
 
 The optional advanced layer registers a local HTTP proxy for apps that honour Android's proxy recommendation, and can block selected safe-to-route IPv4 addresses. Apps using hard-coded DNS servers, encrypted DNS, QUIC, custom sockets, direct IPs, or IPv6 can bypass some or all filtering. Android Private DNS may bypass the local DNS server. The app does not filter HTTPS content or remove cosmetic ad spaces; domains that serve both content and ads cannot be separated by DNS alone. Android permits only one active VPN at a time. These limitations also mean NOichhar cannot truthfully close or count all device connections.
 

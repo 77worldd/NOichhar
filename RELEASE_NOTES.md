@@ -7,6 +7,7 @@ A raven-branded, dark-first redesign with real request statistics and a larger, 
 - Breathing raven shield, glass-style cards, device-wide throughput waveform, real 24-hour activity heatmap and a floating five-tab navigation bar.
 - A Stats screen with 1-hour, 24-hour and seven-day filtered-request rankings and a radial chart, plus optional per-UID network-usage totals from Android.
 - RPN controls for DNS filtering and app rules, custom rules and allowlists, list updates, app management and logs. Settings and DNS options persist and apply to the running VPN.
+- Port-53 TCP DNS queries are reassembled across network packets, alongside the existing UDP path.
 - Version-2 Room database migration preserves existing data. DNS events are aggregated without domain or IP details for the heatmap and counters; detailed logging can be disabled separately.
 - A Bloom-filter-assisted, atomically updated rule index and bounded downloads supporting up to 500,000 block rules. If all downloads fail, the previous list is retained.
 - Adaptive and legacy launcher icons made from the supplied raven emblem.
