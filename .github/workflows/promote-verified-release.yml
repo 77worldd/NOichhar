@@ -20,6 +20,7 @@ jobs:
       CI_RUN: '40528295400'
       SOURCE_RUN: '40528295378'
       VERSION: v2.1.0
+      DRAFT_RELEASE_ID: '425633806'
       GH_TOKEN: ${{ github.token }}
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
@@ -33,23 +34,6 @@ jobs:
             | jq -e --arg sha "$VERIFIED_SHA" '.headSha == $sha and .status == "completed"'
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN/jobs" \
             | jq -e '[.jobs[].steps[] | select(.name == "Align, sign and verify APK" or .name == "Verify signing-key continuity" or .name == "Upload signed release artifacts") | .conclusion] | sort == ["success", "success", "success"]'
-
-      - name: Inspect the previous publication error
-        run: |
-          set -euo pipefail
-          if ! gh api "repos/$GITHUB_REPOSITORY/actions/jobs/122279716456/logs" > "$RUNNER_TEMP/previous-publish.log" 2>/dev/null; then
-            echo "::notice::Previous log is unavailable; continuing with independent verification."
-            : > "$RUNNER_TEMP/previous-publish.log"
-          fi
-          python3 - <<'PY_DIAG'
-          from pathlib import Path
-          import re
-          text = (Path(__import__('os').environ['RUNNER_TEMP']) / 'previous-publish.log').read_text(errors='replace')
-          matches = [line for line in text.splitlines() if re.search(r'HTTP [0-9]{3}|fatal:|permission|error:|gh: |command failed|invalid', line, re.I)]
-          for line in matches[-5:]:
-              safe = line[-1200:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-              print(f'::notice::{safe}')
-          PY_DIAG
 
       - name: Check out the verified release commit
         uses: actions/checkout@v4
@@ -91,26 +75,48 @@ jobs:
           cp RELEASE_NOTES.md "$RUNNER_TEMP/RELEASE_NOTES_GENERATED.md"
           printf '\n---\n\nSHA-256: `%s`\n' "$(cut -d' ' -f1 < "signed-release/NOichhar-${VERSION}.apk.sha256")" >> "$RUNNER_TEMP/RELEASE_NOTES_GENERATED.md"
 
-      - name: Publish the verified v2.1.0 release
+      - name: Stage and publish the verified v2.1.0 draft
         run: |
           set -Eeuo pipefail
           trap 'code=$?; echo "::error::Publication failed at line $LINENO (exit $code)"; exit "$code"' ERR
-          if gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::error::Release $VERSION already exists; refusing to overwrite it."
-            exit 1
-          fi
+          gh api "repos/$GITHUB_REPOSITORY/releases/$DRAFT_RELEASE_ID" > "$RUNNER_TEMP/draft.json"
+          jq -e --arg version "$VERSION" --arg sha "$VERIFIED_SHA" --argjson id "$DRAFT_RELEASE_ID" \
+            '.id == $id and .tag_name == $version and .draft == true and .prerelease == false and .target_commitish == $sha' "$RUNNER_TEMP/draft.json"
           tag_sha="$(git ls-remote --tags origin "refs/tags/$VERSION" "refs/tags/$VERSION^{}" |
             awk -v ref="refs/tags/$VERSION" '$2 == ref { direct=$1 } $2 == (ref "^{}") { peeled=$1 } END { if (peeled) print peeled; else if (direct) print direct }')"
           if [ -n "$tag_sha" ] && [ "$tag_sha" != "$VERIFIED_SHA" ]; then
             echo "::error::Tag $VERSION points to a different object."
             exit 1
           fi
-          if gh release create "$VERSION" "signed-release/NOichhar-${VERSION}.apk" "signed-release/NOichhar-${VERSION}.apk.sha256" \
-            --repo "$GITHUB_REPOSITORY" --target "$VERIFIED_SHA" --title "NOichhar $VERSION" \
-            --notes-file "$RUNNER_TEMP/RELEASE_NOTES_GENERATED.md" --latest > "$RUNNER_TEMP/publish.log" 2>&1; then
-            cat "$RUNNER_TEMP/publish.log"
-          else
+          ensure_asset() {
+            local path="$1" name expected assets count
+            name="$(basename "$path")"
+            expected="sha256:$(sha256sum "$path" | cut -d' ' -f1)"
+            assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/$DRAFT_RELEASE_ID/assets")"
+            count="$(printf '%s' "$assets" | jq --arg name "$name" '[.[] | select(.name == $name)] | length')"
+            if [ "$count" = "0" ]; then
+              if ! gh release upload "$VERSION" "$path" --repo "$GITHUB_REPOSITORY" > "$RUNNER_TEMP/publish.log" 2>&1; then
+                cat "$RUNNER_TEMP/publish.log"
+                python3 -c 'import os,pathlib; text=pathlib.Path(os.environ["RUNNER_TEMP"], "publish.log").read_text(errors="replace")[-2500:]; print("::error::" + text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
+                exit 1
+              fi
+            elif [ "$count" != "1" ] || ! printf '%s' "$assets" | jq -e --arg name "$name" --arg digest "$expected" 'any(.[]; .name == $name and .state == "uploaded" and .digest == $digest)' >/dev/null; then
+              echo "::error::Existing draft asset $name does not match the verified artifact."
+              exit 1
+            fi
+          }
+          ensure_asset "signed-release/NOichhar-${VERSION}.apk"
+          ensure_asset "signed-release/NOichhar-${VERSION}.apk.sha256"
+          assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/$DRAFT_RELEASE_ID/assets")"
+          apk_digest="sha256:$(sha256sum "signed-release/NOichhar-${VERSION}.apk" | cut -d' ' -f1)"
+          sum_digest="sha256:$(sha256sum "signed-release/NOichhar-${VERSION}.apk.sha256" | cut -d' ' -f1)"
+          printf '%s' "$assets" | jq -e --arg apk "NOichhar-${VERSION}.apk" --arg sum "NOichhar-${VERSION}.apk.sha256" \
+            --arg ad "$apk_digest" --arg sd "$sum_digest" \
+            'length == 2 and any(.[]; .name == $apk and .state == "uploaded" and .digest == $ad) and any(.[]; .name == $sum and .state == "uploaded" and .digest == $sd)'
+          if ! gh release edit "$VERSION" --repo "$GITHUB_REPOSITORY" --draft=false --latest \
+            --notes-file "$RUNNER_TEMP/RELEASE_NOTES_GENERATED.md" > "$RUNNER_TEMP/publish.log" 2>&1; then
             cat "$RUNNER_TEMP/publish.log"
             python3 -c 'import os,pathlib; text=pathlib.Path(os.environ["RUNNER_TEMP"], "publish.log").read_text(errors="replace")[-2500:]; print("::error::" + text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))'
             exit 1
           fi
+          cat "$RUNNER_TEMP/publish.log"
