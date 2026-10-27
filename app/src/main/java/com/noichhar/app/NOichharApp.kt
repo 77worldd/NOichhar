@@ -5,7 +5,15 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.noichhar.app.blocker.BlocklistManager
+import com.noichhar.app.blocker.BlocklistUpdateWorker
 import com.noichhar.app.database.NOichharDatabase
 import com.noichhar.app.service.FirewallManager
 import com.noichhar.app.util.Constants
@@ -15,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 class NOichharApp : Application() {
 
@@ -38,12 +47,49 @@ class NOichharApp : Application() {
         )
         blocklistManager = BlocklistManager(this, database)
         createNotificationChannel()
+        scheduleBlocklistUpdates()
 
         applicationScope.launch {
             runCatching {
                 blocklistManager.initialize()
                 FirewallManager(this@NOichharApp).refreshAppList()
             }.onFailure { Logger.e("Failed to initialize local data", it) }
+        }
+    }
+
+    fun scheduleBlocklistUpdates() {
+        val workManager = WorkManager.getInstance(this)
+        if (!preferenceManager.autoUpdateBlocklists) {
+            workManager.cancelUniqueWork(Constants.WORK_BLOCKLIST_PERIODIC)
+            workManager.cancelUniqueWork(Constants.WORK_BLOCKLIST_IMMEDIATE)
+            return
+        }
+
+        val periodicConstraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.UNMETERED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+        val periodic = PeriodicWorkRequestBuilder<BlocklistUpdateWorker>(12, TimeUnit.HOURS)
+            .setConstraints(periodicConstraints)
+            .build()
+        workManager.enqueueUniquePeriodicWork(
+            Constants.WORK_BLOCKLIST_PERIODIC,
+            ExistingPeriodicWorkPolicy.KEEP,
+            periodic
+        )
+
+        if (preferenceManager.lastBlocklistUpdate == 0L) {
+            val immediateConstraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+            val immediate = OneTimeWorkRequestBuilder<BlocklistUpdateWorker>()
+                .setConstraints(immediateConstraints)
+                .build()
+            workManager.enqueueUniqueWork(
+                Constants.WORK_BLOCKLIST_IMMEDIATE,
+                ExistingWorkPolicy.KEEP,
+                immediate
+            )
         }
     }
 
@@ -62,10 +108,6 @@ class NOichharApp : Application() {
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
-    }
-
-    override fun onTerminate() {
-        super.onTerminate()
     }
 
     companion object {

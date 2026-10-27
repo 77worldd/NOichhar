@@ -4,106 +4,150 @@ import com.noichhar.app.util.DomainValidator
 import com.noichhar.app.util.Logger
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
+
+data class BlockRule(
+    val domain: String,
+    val wildcard: Boolean = false,
+    val allow: Boolean = false
+)
 
 class DomainBlocker {
 
-    private val blockedDomains: MutableSet<String> =
-        Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
-    private val wildcardRules = CopyOnWriteArrayList<String>()
-    private val whitelistedDomains: MutableSet<String> =
-        Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    private val exactRules: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    private val wildcardSuffixes: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    private val exactAllowRules: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    private val wildcardAllowSuffixes: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     @Volatile
     var domainCount: Int = 0
         private set
 
     fun loadDomains(domains: List<String>) {
-        val exact = HashSet<String>(domains.size)
-        val wildcard = ArrayList<String>()
-        for (raw in domains) {
-            val rule = DomainValidator.normalize(raw) ?: continue
-            if (rule.wildcard) wildcard.add(rule.domain) else exact.add(rule.domain)
+        val rules = domains.mapNotNull { raw ->
+            DomainValidator.normalize(raw)?.let { BlockRule(it.domain, it.wildcard) }
         }
-        blockedDomains.clear()
-        blockedDomains.addAll(exact)
-        wildcardRules.clear()
-        wildcardRules.addAll(wildcard.distinct())
+        loadRules(rules)
+    }
+
+    fun loadRules(rules: Collection<BlockRule>) {
+        val exact = HashSet<String>(rules.size)
+        val wildcards = HashSet<String>()
+        val allowExact = HashSet<String>()
+        val allowWildcards = HashSet<String>()
+
+        rules.forEach { rule ->
+            val normalized = DomainValidator.normalize(rule.domain) ?: return@forEach
+            val value = normalized.domain
+            val wildcard = rule.wildcard || normalized.wildcard
+            when {
+                rule.allow && wildcard -> allowWildcards += value
+                rule.allow -> allowExact += value
+                wildcard -> wildcards += value
+                else -> exact += value
+            }
+        }
+
+        exactRules.clear()
+        exactRules.addAll(exact)
+        wildcardSuffixes.clear()
+        wildcardSuffixes.addAll(wildcards)
+        exactAllowRules.clear()
+        exactAllowRules.addAll(allowExact)
+        wildcardAllowSuffixes.clear()
+        wildcardAllowSuffixes.addAll(allowWildcards)
         updateCount()
-        Logger.i("Loaded $domainCount block rules")
+        Logger.i("Loaded $domainCount block rules and ${allowExact.size + allowWildcards.size} allow rules")
     }
 
     fun addDomain(domain: String) {
         val rule = DomainValidator.normalize(domain) ?: return
-        if (rule.wildcard) {
-            if (!wildcardRules.contains(rule.domain)) wildcardRules.add(rule.domain)
-        } else {
-            blockedDomains.add(rule.domain)
-        }
+        if (rule.wildcard) wildcardSuffixes += rule.domain else exactRules += rule.domain
         updateCount()
     }
 
     fun removeDomain(domain: String) {
         val rule = DomainValidator.normalize(domain) ?: return
-        blockedDomains.remove(rule.domain)
-        wildcardRules.remove(rule.domain)
-        whitelistedDomains.remove(rule.domain)
+        exactRules.remove(rule.domain)
+        wildcardSuffixes.remove(rule.domain)
+        exactAllowRules.remove(rule.domain)
+        wildcardAllowSuffixes.remove(rule.domain)
         updateCount()
     }
 
     fun addWhitelist(domain: String) {
         val rule = DomainValidator.normalize(domain) ?: return
-        whitelistedDomains.add(rule.domain)
+        exactAllowRules += rule.domain
+        // Preserve the original user-facing behaviour: allowing a parent domain also
+        // allows its subdomains. Explicit rules loaded from lists stay exact-only.
+        if (!rule.wildcard) wildcardAllowSuffixes += rule.domain
+    }
+
+    fun addAllowRule(domain: String, includeSubdomains: Boolean = false) {
+        val rule = DomainValidator.normalize(domain) ?: return
+        if (rule.wildcard || includeSubdomains) {
+            wildcardAllowSuffixes += rule.domain
+        } else {
+            exactAllowRules += rule.domain
+        }
     }
 
     fun isBlocked(rawDomain: String): Boolean {
-        val rule = DomainValidator.normalize(rawDomain) ?: return false
-        val domain = rule.domain
-
-        if (isWhitelisted(domain)) return false
-        if (blockedDomains.contains(domain)) return true
+        val normalized = DomainValidator.normalize(rawDomain) ?: return false
+        val domain = normalized.domain
+        if (isAllowed(domain)) return false
+        if (exactRules.contains(domain)) return true
 
         val parts = domain.split('.')
         for (i in 1 until parts.size - 1) {
-            val parent = parts.subList(i, parts.size).joinToString(".")
-            if (blockedDomains.contains(parent)) return true
+            if (exactRules.contains(parts.subList(i, parts.size).joinToString("."))) return true
         }
 
-        return WildcardMatcher.matchesAnySuffix(wildcardRules, domain)
+        for (i in 0 until parts.size - 1) {
+            if (wildcardSuffixes.contains(parts.subList(i, parts.size).joinToString("."))) return true
+        }
+        return false
     }
 
     fun getBlockReason(rawDomain: String): String? {
-        val rule = DomainValidator.normalize(rawDomain) ?: return null
-        val domain = rule.domain
-        if (blockedDomains.contains(domain)) return "Direct match: $domain"
+        val normalized = DomainValidator.normalize(rawDomain) ?: return null
+        val domain = normalized.domain
+        if (isAllowed(domain)) return null
+        if (exactRules.contains(domain)) return "Direct match: $domain"
 
         val parts = domain.split('.')
         for (i in 1 until parts.size - 1) {
             val parent = parts.subList(i, parts.size).joinToString(".")
-            if (blockedDomains.contains(parent)) return "Parent domain: $parent"
+            if (exactRules.contains(parent)) return "Parent domain: $parent"
         }
-
-        val wildcard = wildcardRules.firstOrNull { WildcardMatcher.matchesSuffix(it, domain) }
-        return wildcard?.let { "Wildcard: *.$it" }
+        for (i in 0 until parts.size - 1) {
+            val suffix = parts.subList(i, parts.size).joinToString(".")
+            if (wildcardSuffixes.contains(suffix)) return "Wildcard: *.$suffix"
+        }
+        return null
     }
 
+    fun blockedRuleCount(): Int = domainCount
+
+    fun allowRuleCount(): Int = exactAllowRules.size + wildcardAllowSuffixes.size
+
     fun clear() {
-        blockedDomains.clear()
-        wildcardRules.clear()
-        whitelistedDomains.clear()
+        exactRules.clear()
+        wildcardSuffixes.clear()
+        exactAllowRules.clear()
+        wildcardAllowSuffixes.clear()
         domainCount = 0
     }
 
-    private fun isWhitelisted(domain: String): Boolean {
-        if (whitelistedDomains.contains(domain)) return true
+    private fun isAllowed(domain: String): Boolean {
+        if (exactAllowRules.contains(domain)) return true
         val parts = domain.split('.')
-        for (i in 1 until parts.size - 1) {
-            if (whitelistedDomains.contains(parts.subList(i, parts.size).joinToString("."))) return true
+        for (i in 0 until parts.size - 1) {
+            if (wildcardAllowSuffixes.contains(parts.subList(i, parts.size).joinToString("."))) return true
         }
         return false
     }
 
     private fun updateCount() {
-        domainCount = blockedDomains.size + wildcardRules.size
+        domainCount = exactRules.size + wildcardSuffixes.size
     }
 }

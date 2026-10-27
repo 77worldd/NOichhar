@@ -12,15 +12,19 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.noichhar.app.NOichharApp
 import com.noichhar.app.R
 import com.noichhar.app.databinding.FragmentSettingsBinding
+import com.noichhar.app.service.NOichharVpnService
+import kotlinx.coroutines.launch
 
 class SettingsFragment : Fragment() {
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
     private val prefManager = NOichharApp.instance.preferenceManager
+    private val blocklistManager = NOichharApp.instance.blocklistManager
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -34,6 +38,13 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupUI()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        binding.switchAdvancedProtection.isChecked = prefManager.advancedProtection
+        binding.switchBlockDoh.isChecked = prefManager.blockDohBypass
+        binding.switchAutoUpdate.isChecked = prefManager.autoUpdateBlocklists
     }
 
     private fun setupUI() {
@@ -56,6 +67,37 @@ class SettingsFragment : Fragment() {
             )
         }
 
+        binding.switchAdvancedProtection.isChecked = prefManager.advancedProtection
+        binding.switchAdvancedProtection.setOnCheckedChangeListener { _, isChecked ->
+            prefManager.advancedProtection = isChecked
+            NOichharVpnService.instance?.refreshProtection()
+        }
+
+        binding.switchBlockDoh.isChecked = prefManager.blockDohBypass
+        binding.switchBlockDoh.setOnCheckedChangeListener { _, isChecked ->
+            prefManager.blockDohBypass = isChecked
+            viewLifecycleOwner.lifecycleScope.launch {
+                blocklistManager.reloadRules()
+                NOichharVpnService.instance?.refreshProtection()
+            }
+        }
+
+        binding.switchAutoUpdate.isChecked = prefManager.autoUpdateBlocklists
+        binding.switchAutoUpdate.setOnCheckedChangeListener { _, isChecked ->
+            prefManager.autoUpdateBlocklists = isChecked
+            NOichharApp.instance.scheduleBlocklistUpdates()
+        }
+
+        binding.btnRefreshProtection.setOnClickListener {
+            val service = NOichharVpnService.instance
+            if (service != null && NOichharVpnService.isActive) {
+                service.refreshProtection()
+                Toast.makeText(requireContext(), R.string.protection_refreshed, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), R.string.start_protection_first, Toast.LENGTH_SHORT).show()
+            }
+        }
+
         binding.btnVpnSettings.setOnClickListener {
             runCatching { startActivity(Intent(Settings.ACTION_VPN_SETTINGS)) }
                 .onFailure { error ->
@@ -74,13 +116,13 @@ class SettingsFragment : Fragment() {
             packageManager.getPackageInfo(
                 requireContext().packageName,
                 PackageManager.PackageInfoFlags.of(0)
-            ).versionName ?: "1.0.0"
+            ).versionName ?: "2.0.0"
         } else {
             @Suppress("DEPRECATION")
-            packageManager.getPackageInfo(requireContext().packageName, 0).versionName ?: "1.0.0"
+            packageManager.getPackageInfo(requireContext().packageName, 0).versionName ?: "2.0.0"
         }
     } catch (_: Exception) {
-        "1.0.0"
+        "2.0.0"
     }
 
     override fun onDestroyView() {

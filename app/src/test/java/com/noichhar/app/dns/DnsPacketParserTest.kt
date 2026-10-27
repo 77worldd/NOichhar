@@ -43,6 +43,41 @@ class DnsPacketParserTest {
         assertArrayEquals(byteArrayOf(1, 2, 3, 4), response)
     }
 
+    @Test
+    fun parsesTtlAnswerNameAndIpv4Address() {
+        val response = answerResponse(
+            domain = "cdn.example.com",
+            type = DnsPacketParser.TYPE_A,
+            ttlSeconds = 120,
+            rdata = byteArrayOf(93.toByte(), 184.toByte(), 216.toByte(), 34.toByte())
+        )
+        assertEquals(120L, DnsPacketParser.getMinAnswerTtlSeconds(response))
+        assertEquals("93.184.216.34", DnsPacketParser.parseFirstAnswerIp(response))
+        assertEquals(listOf("93.184.216.34"), DnsPacketParser.parseAnswerIps(response))
+        assertTrue(DnsPacketParser.parseAnswerNames(response).contains("cdn.example.com"))
+    }
+
+    private fun answerResponse(domain: String, type: Int, ttlSeconds: Int, rdata: ByteArray): ByteArray {
+        val question = query(domain, type)
+        val output = ByteArrayOutputStream()
+        DataOutputStream(output).use { stream ->
+            stream.writeShort(0x1234)
+            stream.writeShort(0x8180)
+            stream.writeShort(1)
+            stream.writeShort(1)
+            stream.writeShort(0)
+            stream.writeShort(0)
+            stream.write(question, 12, question.size - 12)
+            stream.writeShort(0xC00C)
+            stream.writeShort(type)
+            stream.writeShort(1)
+            stream.writeInt(ttlSeconds)
+            stream.writeShort(rdata.size)
+            stream.write(rdata)
+        }
+        return output.toByteArray()
+    }
+
     private fun query(domain: String, type: Int, transactionId: Int = 0x1234): ByteArray {
         val output = ByteArrayOutputStream()
         val stream = DataOutputStream(output)

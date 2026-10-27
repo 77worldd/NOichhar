@@ -1,5 +1,6 @@
 package com.noichhar.app.net
 
+import com.noichhar.app.util.Constants
 import java.net.InetAddress
 import java.nio.ByteBuffer
 
@@ -69,12 +70,35 @@ data class IPPacket(
         }
     }
 
-    fun isDnsQuery(): Boolean = protocol == PROTOCOL_UDP && destPort == 53
+    fun isUdpDnsQuery(): Boolean = protocol == PROTOCOL_UDP && destPort == Constants.DNS_PORT
+
+    fun isTcpDnsQuery(): Boolean = protocol == PROTOCOL_TCP && destPort == Constants.DNS_PORT
+
+    fun isDnsQuery(): Boolean = isUdpDnsQuery() || isTcpDnsQuery()
+
+    fun isDnsTarget(): Boolean = destAddress.hostAddress == Constants.VPN_DNS_ADDRESS
+
+    fun tcpSegment(): TcpSegment? =
+        if (protocol == PROTOCOL_TCP) TcpSegment.parse(payload) else null
 
     fun getDnsPayload(): ByteArray? {
-        if (!isDnsQuery() || payload.size < 8) return null
+        if (!isDnsQuery()) return null
+        return if (isUdpDnsQuery()) getUdpDnsPayload() else getTcpDnsPayload()
+    }
+
+    private fun getUdpDnsPayload(): ByteArray? {
+        if (payload.size < 8) return null
         val udpLength = ((payload[4].toInt() and 0xFF) shl 8) or (payload[5].toInt() and 0xFF)
         val end = if (udpLength in 8..payload.size) udpLength else payload.size
         return if (end > 8) payload.copyOfRange(8, end) else null
+    }
+
+    private fun getTcpDnsPayload(): ByteArray? {
+        val segment = tcpSegment() ?: return null
+        if (segment.payload.size < 14) return null
+        val dnsLength = ((segment.payload[0].toInt() and 0xFF) shl 8) or
+            (segment.payload[1].toInt() and 0xFF)
+        if (dnsLength < 12 || dnsLength + 2 > segment.payload.size) return null
+        return segment.payload.copyOfRange(2, dnsLength + 2)
     }
 }

@@ -9,6 +9,8 @@
 -keep class com.noichhar.app.ui.activity.** { *; }
 -keep class com.noichhar.app.service.** { *; }
 -keep class com.noichhar.app.receiver.** { *; }
+-keep class * extends androidx.work.ListenableWorker { *; }
+-keep class * extends androidx.work.CoroutineWorker { *; }
 
 -dontwarn okhttp3.**
 -dontwarn okio.**

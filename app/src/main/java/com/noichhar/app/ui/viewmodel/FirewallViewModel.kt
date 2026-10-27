@@ -23,7 +23,8 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
 
     val blocklistCount: LiveData<Int> = database.blocklistDao().getCount()
     val connections: LiveData<List<ConnectionLog>> = database.connectionLogDao().getRecentConnections()
-    val userBlocklist: LiveData<List<BlocklistEntry>> = database.blocklistDao().getUserAddedEntries()
+    val userBlocklist: LiveData<List<BlocklistEntry>> = database.blocklistDao().getUserBlockEntries()
+    val userAllowlist: LiveData<List<BlocklistEntry>> = database.blocklistDao().getUserAllowEntries()
 
     private val _operationMessage = MutableLiveData<UiMessage?>(null)
     val operationMessage: LiveData<UiMessage?> = _operationMessage
@@ -63,6 +64,20 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun addCustomAllowDomain(rawDomain: String, includeSubdomains: Boolean) {
+        viewModelScope.launch {
+            val message = if (DomainValidator.normalize(rawDomain) == null) {
+                UiMessage(R.string.rule_invalid)
+            } else if (blocklistManager.addCustomAllowDomain(rawDomain, includeSubdomains)) {
+                clearCache()
+                UiMessage(R.string.allow_rule_added, rawDomain.trim())
+            } else {
+                UiMessage(R.string.rule_invalid)
+            }
+            _operationMessage.value = message
+        }
+    }
+
     fun removeCustomBlockDomain(entry: BlocklistEntry) {
         viewModelScope.launch {
             val display = if (entry.isWildcard) "*.${entry.domain}" else entry.domain
@@ -72,11 +87,21 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun removeCustomAllowDomain(entry: BlocklistEntry) {
+        viewModelScope.launch {
+            val display = if (entry.isWildcard) "*.${entry.domain}" else entry.domain
+            blocklistManager.removeDomain(display)
+            clearCache()
+            _operationMessage.value = UiMessage(R.string.allow_rule_removed, display)
+        }
+    }
+
     fun updateBlocklists() {
         viewModelScope.launch {
             _operationMessage.value = UiMessage(R.string.blocklist_updating)
             val count = runCatching { blocklistManager.updateBlocklists() }.getOrDefault(0)
             clearCache()
+            NOichharVpnService.instance?.refreshProtection()
             _operationMessage.value = if (count > 0) {
                 UiMessage(R.string.blocklist_updated_count, count)
             } else {

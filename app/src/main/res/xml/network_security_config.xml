@@ -5,4 +5,9 @@
             <certificates src="system" />
         </trust-anchors>
     </base-config>
+    <!-- The local HTTP filter proxy listens only on loopback and never leaves the device. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
 </network-security-config>

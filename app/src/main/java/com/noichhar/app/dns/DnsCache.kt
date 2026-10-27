@@ -18,10 +18,15 @@ class DnsCache {
             cache.remove(key)
             return null
         }
-        return entry.response
+        return entry.response.copyOf()
     }
 
-    fun put(domain: String, type: Int, response: ByteArray, ttlSeconds: Long = Constants.DNS_CACHE_TTL_SECONDS) {
+    fun put(
+        domain: String,
+        type: Int,
+        response: ByteArray,
+        ttlSeconds: Long = Constants.DNS_CACHE_TTL_SECONDS
+    ) {
         val key = key(domain, type)
         if (cache.size >= Constants.DNS_CACHE_SIZE) {
             val now = System.currentTimeMillis()
@@ -30,7 +35,16 @@ class DnsCache {
                 cache.entries.minByOrNull { it.value.expireTime }?.let { cache.remove(it.key) }
             }
         }
-        cache[key] = CacheEntry(response.copyOf(), nowMillis() + ttlSeconds.coerceAtLeast(0L) * 1000L)
+
+        val effectiveTtl = if (ttlSeconds == Constants.DNS_CACHE_TTL_SECONDS) {
+            DnsPacketParser.getMinAnswerTtlSeconds(response)
+                ?.coerceIn(Constants.MIN_DNS_CACHE_TTL_SECONDS, Constants.MAX_DNS_CACHE_TTL_SECONDS)
+                ?: ttlSeconds
+        } else {
+            ttlSeconds
+        }.coerceAtLeast(0L)
+
+        cache[key] = CacheEntry(response.copyOf(), System.currentTimeMillis() + effectiveTtl * 1000L)
     }
 
     fun clear() {
@@ -40,6 +54,4 @@ class DnsCache {
     fun size(): Int = cache.size
 
     private fun key(domain: String, type: Int): String = "${domain.trim().lowercase()}:$type"
-
-    private fun nowMillis(): Long = System.currentTimeMillis()
 }

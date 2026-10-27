@@ -4,7 +4,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.ProxyInfo
 import android.net.VpnService
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import com.noichhar.app.NOichharApp
 import com.noichhar.app.R
@@ -12,8 +14,11 @@ import com.noichhar.app.blocker.BlocklistManager
 import com.noichhar.app.database.entity.DnsLog
 import com.noichhar.app.dns.DnsCache
 import com.noichhar.app.net.DnsQueryEvent
+import com.noichhar.app.net.LocalFilterProxy
 import com.noichhar.app.net.NetworkMonitor
+import com.noichhar.app.net.NetworkShield
 import com.noichhar.app.net.PacketInterceptor
+import com.noichhar.app.net.UidResolver
 import com.noichhar.app.ui.activity.MainActivity
 import com.noichhar.app.util.Constants
 import com.noichhar.app.util.Logger
@@ -31,8 +36,10 @@ class NOichharVpnService : VpnService() {
     private var vpnInterface: ParcelFileDescriptor? = null
     private var packetInterceptor: PacketInterceptor? = null
     private var networkMonitor: NetworkMonitor? = null
+    private var localFilterProxy: LocalFilterProxy? = null
     private lateinit var blocklistManager: BlocklistManager
     private lateinit var firewallManager: FirewallManager
+    private lateinit var networkShield: NetworkShield
     private val connectionTracker = ConnectionTracker()
     private val dnsCache = DnsCache()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -43,6 +50,12 @@ class NOichharVpnService : VpnService() {
 
     @Volatile
     private var foregroundStarted = false
+
+    @Volatile
+    private var proxyPort: Int? = null
+
+    @Volatile
+    private var activeBlockedIps: Set<String> = emptySet()
 
     companion object {
         var instance: NOichharVpnService? = null
@@ -59,6 +72,9 @@ class NOichharVpnService : VpnService() {
 
         val isActive: Boolean
             get() = instance?.isRunning == true
+
+        val advancedHostFilteringAvailable: Boolean
+            get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
     }
 
     override fun onCreate() {
@@ -66,6 +82,7 @@ class NOichharVpnService : VpnService() {
         instance = this
         blocklistManager = NOichharApp.instance.blocklistManager
         firewallManager = FirewallManager(this)
+        networkShield = NetworkShield(applicationContext, NOichharApp.instance.preferenceManager, blocklistManager)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -104,6 +121,7 @@ class NOichharVpnService : VpnService() {
                     blocklistManager.initialize()
                     firewallManager.refreshAppList()
                     loadCounters()
+                    startAdvancedComponents()
 
                     val descriptor = createVpnInterface()
                     if (descriptor == null) {
@@ -119,7 +137,7 @@ class NOichharVpnService : VpnService() {
                     startNetworkMonitor()
                     refreshNotification()
                     broadcastVpnState(true)
-                    Logger.i("VPN started successfully")
+                    Logger.i("VPN started with ${activeBlockedIps.size} shielded IP routes")
                 } catch (e: Exception) {
                     Logger.e("Failed to start VPN", e)
                     stopVpn()
@@ -128,7 +146,35 @@ class NOichharVpnService : VpnService() {
         }
     }
 
-    private fun createVpnInterface(): ParcelFileDescriptor? = try {
+    private fun startAdvancedComponents() {
+        localFilterProxy?.stop()
+        localFilterProxy = null
+        proxyPort = null
+
+        val preferences = NOichharApp.instance.preferenceManager
+        if (!preferences.advancedProtection) {
+            activeBlockedIps = emptySet()
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val proxy = LocalFilterProxy(
+                context = applicationContext,
+                domainBlocker = blocklistManager.domainBlocker,
+                firewallManager = firewallManager,
+                uidResolver = UidResolver(applicationContext),
+                protectSocket = { socket -> runCatching { protect(socket) }.getOrDefault(false) },
+                onBlocked = { event -> scope.launch { onDnsQuery(event) } }
+            )
+            val port = proxy.start()
+            if (port != null) {
+                localFilterProxy = proxy
+                proxyPort = port
+            }
+        }
+    }
+
+    private suspend fun createVpnInterface(forceShieldRefresh: Boolean = false): ParcelFileDescriptor? = try {
         val configureIntent = PendingIntent.getActivity(
             this,
             0,
@@ -136,7 +182,8 @@ class NOichharVpnService : VpnService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        Builder()
+        activeBlockedIps = networkShield.refreshIfStale(forceShieldRefresh)
+        val builder = Builder()
             .setSession(getString(R.string.app_name))
             .setConfigureIntent(configureIntent)
             .setMtu(Constants.VPN_MTU)
@@ -144,10 +191,24 @@ class NOichharVpnService : VpnService() {
             .addRoute(Constants.VPN_DNS_ADDRESS, 32)
             .addDnsServer(Constants.VPN_DNS_ADDRESS)
             .setBlocking(true)
-            .also { builder ->
-                runCatching { builder.addDisallowedApplication(packageName) }
-            }
-            .establish()
+
+        activeBlockedIps.forEach { ip ->
+            runCatching { builder.addRoute(ip, 32) }
+                .onFailure { Logger.w("Skipping invalid network shield route: $ip") }
+        }
+
+        val port = proxyPort
+        if (port != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val exclusions = listOf("localhost", "127.0.0.1", "*.local")
+            runCatching {
+                builder.setHttpProxy(
+                    ProxyInfo.buildDirectProxy(Constants.LOCAL_PROXY_ADDRESS, port, exclusions)
+                )
+            }.onFailure { Logger.e("Could not enable hostname-aware app filtering", it) }
+        }
+
+        runCatching { builder.addDisallowedApplication(packageName) }
+        builder.establish()
     } catch (e: Exception) {
         Logger.e("Failed to establish VPN", e)
         null
@@ -162,6 +223,8 @@ class NOichharVpnService : VpnService() {
             dnsCache = dnsCache,
             preferenceManager = NOichharApp.instance.preferenceManager,
             firewallManager = firewallManager,
+            blockedIps = activeBlockedIps,
+            networkShield = networkShield,
             onDnsQuery = { event -> scope.launch { onDnsQuery(event) } }
         ).also { it.start() }
     }
@@ -171,8 +234,9 @@ class NOichharVpnService : VpnService() {
         networkMonitor = NetworkMonitor(applicationContext).also { monitor ->
             monitor.onNetworkChanged = { available ->
                 if (available && isRunning) {
-                    Logger.i("Network restored, clearing DNS cache")
+                    Logger.i("Network restored, clearing DNS cache and refreshing shield")
                     dnsCache.clear()
+                    scope.launch { runCatching { networkShield.refreshIfStale() } }
                 }
             }
             monitor.start()
@@ -210,11 +274,17 @@ class NOichharVpnService : VpnService() {
                 )
             )
 
+            val destinationPort = when (event.queryType) {
+                "HTTP" -> Constants.HTTP_PORT
+                "HTTPS" -> Constants.HTTPS_PORT
+                "IP" -> 0
+                else -> Constants.DNS_PORT
+            }
             connectionTracker.logConnection(
                 appUid = event.appUid,
                 appName = event.appName,
                 destinationIp = event.domain,
-                destinationPort = Constants.DNS_PORT,
+                destinationPort = destinationPort,
                 protocol = if (event.isBlocked) "BLOCKED" else "ALLOWED",
                 isBlocked = event.isBlocked
             )
@@ -226,14 +296,18 @@ class NOichharVpnService : VpnService() {
         }.onFailure { Logger.e("Failed to log DNS query", it) }
     }
 
-    fun reloadConfiguration() {
-        if (!isRunning) return
+    fun reloadConfiguration(forceShieldRefresh: Boolean = false) {
+        if (!isRunning) {
+            scope.launch { runCatching { networkShield.refreshIfStale(forceShieldRefresh) } }
+            return
+        }
         scope.launch {
             vpnMutex.withLock {
                 if (!isRunning) return@withLock
                 packetInterceptor?.stop()
                 dnsCache.clear()
-                val descriptor = createVpnInterface()
+                startAdvancedComponents()
+                val descriptor = createVpnInterface(forceShieldRefresh)
                 if (descriptor == null) {
                     stopVpn()
                     return@withLock
@@ -245,6 +319,8 @@ class NOichharVpnService : VpnService() {
             }
         }
     }
+
+    fun refreshProtection() = reloadConfiguration(forceShieldRefresh = true)
 
     fun refreshFirewallRules() {
         scope.launch {
@@ -263,6 +339,10 @@ class NOichharVpnService : VpnService() {
         packetInterceptor = null
         networkMonitor?.stop()
         networkMonitor = null
+        localFilterProxy?.stop()
+        localFilterProxy = null
+        proxyPort = null
+        activeBlockedIps = emptySet()
         dnsCache.clear()
 
         runCatching { vpnInterface?.close() }

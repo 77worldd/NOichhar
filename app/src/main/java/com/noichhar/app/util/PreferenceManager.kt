@@ -63,6 +63,26 @@ class PreferenceManager(context: Context) {
         get() = prefs.getLong(Constants.PREF_LAST_BLOCKLIST_UPDATE, 0L)
         set(value) = prefs.edit().putLong(Constants.PREF_LAST_BLOCKLIST_UPDATE, value).apply()
 
+    var advancedProtection: Boolean
+        get() = prefs.getBoolean(Constants.PREF_ADVANCED_PROTECTION, true)
+        set(value) = prefs.edit().putBoolean(Constants.PREF_ADVANCED_PROTECTION, value).apply()
+
+    var blockDohBypass: Boolean
+        get() = prefs.getBoolean(Constants.PREF_BLOCK_DOH_BYPASS, true)
+        set(value) = prefs.edit().putBoolean(Constants.PREF_BLOCK_DOH_BYPASS, value).apply()
+
+    var autoUpdateBlocklists: Boolean
+        get() = prefs.getBoolean(Constants.PREF_AUTO_UPDATE_BLOCKLISTS, true)
+        set(value) = prefs.edit().putBoolean(Constants.PREF_AUTO_UPDATE_BLOCKLISTS, value).apply()
+
+    var networkShieldIps: Set<String>
+        get() = prefs.getStringSet(Constants.PREF_NETWORK_SHIELD_IPS, emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet(Constants.PREF_NETWORK_SHIELD_IPS, value).apply()
+
+    var networkShieldUpdated: Long
+        get() = prefs.getLong(Constants.PREF_NETWORK_SHIELD_UPDATED, 0L)
+        set(value) = prefs.edit().putLong(Constants.PREF_NETWORK_SHIELD_UPDATED, value).apply()
+
     fun saveDnsSettings(
         provider: DnsProvider,
         protocol: DnsProtocol,
