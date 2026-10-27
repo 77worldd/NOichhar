@@ -1,73 +1,23 @@
-# NOichhar v2.0.1 — Maximum Protection
+# NOichhar v2.1.0 — Obsidian Minimalism
 
-This patch keeps every v2 protection layer while fixing rule precedence, TCP resets and hot-path performance issues found during a post-release audit.
+A raven-branded, dark-first redesign with real request statistics and a larger, safer blocklist engine. The package remains `com.noichhar.app`; no root is required.
 
-## What is fixed in 2.0.1
+## What's new
 
-- User block rules now always override downloaded exceptions and the built-in essential allowlist.
-- A user block added for an allowlisted domain takes effect immediately.
-- Route-shield TCP resets now acknowledge SYN correctly, so blocked connections fail fast instead of waiting for a timeout.
-- App names and package names are cached, and log pruning is periodic, reducing per-query work on the DNS hot path.
-- Custom DNS-over-HTTPS endpoints must use `https://`; cleartext endpoints are rejected.
-- Malformed absolute-form HTTPS proxy requests are rejected instead of being sent as cleartext to port 443.
-- CI now verifies that the new APK uses the same signing certificate as official v2.0.0 before publishing.
+- Breathing raven shield, glass-style cards, device-wide throughput waveform, real 24-hour activity heatmap and a floating five-tab navigation bar.
+- A Stats screen with 1-hour, 24-hour and seven-day filtered-request rankings and a radial chart, plus optional per-UID network-usage totals from Android.
+- RPN controls for DNS filtering and app rules, custom rules and allowlists, list updates, app management and logs. Settings and DNS options persist and apply to the running VPN.
+- Port-53 TCP DNS queries are reassembled across network packets, alongside the existing UDP path.
+- Version-2 Room database migration preserves existing data. DNS events are aggregated without domain or IP details for the heatmap and counters; detailed logging can be disabled separately.
+- A Bloom-filter-assisted, atomically updated rule index and bounded downloads supporting up to 500,000 block rules. If all downloads fail, the previous list is retained.
+- Adaptive and legacy launcher icons made from the supplied raven emblem.
 
-## What is included from v2
+## Installation and usage
 
-### Stronger in-app ad blocking
+Install the signed `NOichhar-v2.1.0.apk` over a compatible v2 release, open the app and accept the VPN prompt. Grant **Usage Access** from the Stats or Configure screen for optional per-app bandwidth. Android may delay or deny some mobile usage data; the app labels unavailable data rather than inventing values.
 
-- Four protection layers in **Maximum** mode: DNS filtering, DNS-over-TCP filtering, hostname-aware app filtering and route-level IP shielding.
-- Local loopback HTTP proxy registered through Android's `VpnService.Builder.setHttpProxy()` on Android 10+.
-- HTTPS `CONNECT` hostname and plain HTTP `Host` checks against the same blocklist, allowlist and per-app rules.
-- DNS over TCP on port 53 is now answered locally with correctly framed TCP DNS responses.
-- CNAME/alias inspection prevents blocked upstream aliases from bypassing a filter through an allowed name.
-- Curated network shield resolves high-value ad/tracker hosts and blocks safe, allowlist-checked IPv4 routes.
-- Optional blocking of well-known hard-coded encrypted-DNS resolver hostnames.
+## Important limitations
 
-### Better filter lists
+Only traffic sent to the VPN DNS address and selected shield routes enters the TUN interface. App rules cover DNS and compatible system-proxy requests, not every direct connection. Hard-coded or encrypted DNS, some custom networking stacks, QUIC and IPv6 can bypass filtering. Throughput and bandwidth figures are device-wide Android estimates, not a count of active VPN connections. Detailed logs can be disabled; anonymous, per-UID aggregate statistics have a seven-day on-device retention policy; Android scheduling or a force-stop can delay cleanup.
 
-- Thousands of curated offline mobile ad and tracker domains.
-- Automatic 12-hour updates from HaGeZi Multi PRO mini, StevenBlack Unified hosts and AdAway hosts.
-- Robust hosts, compressed-hosts, plain-domain and Adblock Plus parsing, including exception rules.
-- Essential first-party allowlist and user-defined allow rules for fixing false positives.
-- User block and allow rules always override downloaded and built-in rules.
-- Chunked, bounded database writes and a suffix-set matcher to keep lookups fast.
-
-### Performance and reliability
-
-- No full-traffic userspace relay and no HTTPS decryption.
-- Normal app traffic stays on the normal network path; only DNS and shielded IPs enter the TUN interface.
-- TTL-aware DNS cache respects upstream record lifetimes.
-- Background filter updates run on unmetered networks through WorkManager.
-- A bounded proxy connection pool and per-flow streaming relay avoid buffering whole downloads.
-
-### Cleaner, more accessible UI
-
-- New deep-teal and slate Material 3 palette with coordinated light and dark themes.
-- One-tap **Balanced / Maximum** protection selector on Home.
-- Refreshed hero card, soft stat cards, status pill, protection explanation and update button.
-- New Protection settings for maximum mode, DNS-bypass blocking, automatic updates and manual refresh.
-- Allowlist screen with subdomain support.
-- Larger touch targets, labelled controls, readable contrast, scalable text and smooth layout transitions.
-- Version 2.0.1 with adaptive launcher icons and signed release verification.
-
-## Installation
-
-1. Download the signed `NOichhar-v2.0.1.apk` asset.
-2. Install it on Android 7.0 (API 24) or newer.
-3. Open NOichhar and accept the Android VPN connection prompt.
-4. Turn off Android **Private DNS** in system network settings if it is set to automatic/strict mode.
-5. Choose **Maximum** protection and tap **START**.
-
-CI checks that the signing certificate matches the official v2.0.0 release before publishing. Users upgrading from v1.0.0 should uninstall it first because v2 uses a different signing certificate.
-
-## Important platform notes
-
-- Hostname-aware app filtering requires Android 10+ and only applies to apps that honour Android's system HTTP-proxy recommendation.
-- Apps with custom networking stacks, hard-coded DNS-over-HTTPS, QUIC/HTTP-3 or raw sockets can bypass parts of the filter.
-- DNS and hostname filtering cannot remove ad placeholders or block ads served from the same hostname as content.
-- NOichhar does not decrypt HTTPS or install a CA certificate.
-- Direct connections to unknown IP addresses and IPv6-only traffic remain outside this DNS and IPv4 route-shield architecture.
-- The local VPN occupies Android's single active VPN slot.
-
-The release APK is signed with the official repository signing key generated and cached by GitHub Actions. The private key is never committed to Git.
+The release workflow verifies signing-certificate continuity with v2.0.0 and publishes a SHA-256 checksum. Users upgrading from the differently signed v1.0.0 must uninstall that version first.

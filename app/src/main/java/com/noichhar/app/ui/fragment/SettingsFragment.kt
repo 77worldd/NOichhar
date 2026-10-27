@@ -10,7 +10,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.noichhar.app.NOichharApp
@@ -56,15 +55,6 @@ class SettingsFragment : Fragment() {
         binding.switchLogs.isChecked = prefManager.enableLogs
         binding.switchLogs.setOnCheckedChangeListener { _, isChecked ->
             prefManager.enableLogs = isChecked
-        }
-
-        binding.switchDarkMode.isChecked = prefManager.darkMode
-        binding.switchDarkMode.setOnCheckedChangeListener { _, isChecked ->
-            prefManager.darkMode = isChecked
-            AppCompatDelegate.setDefaultNightMode(
-                if (isChecked) AppCompatDelegate.MODE_NIGHT_YES
-                else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-            )
         }
 
         binding.switchAdvancedProtection.isChecked = prefManager.advancedProtection
@@ -116,13 +106,13 @@ class SettingsFragment : Fragment() {
             packageManager.getPackageInfo(
                 requireContext().packageName,
                 PackageManager.PackageInfoFlags.of(0)
-            ).versionName ?: "2.0.1"
+            ).versionName ?: "unknown"
         } else {
             @Suppress("DEPRECATION")
-            packageManager.getPackageInfo(requireContext().packageName, 0).versionName ?: "2.0.1"
+            packageManager.getPackageInfo(requireContext().packageName, 0).versionName ?: "unknown"
         }
     } catch (_: Exception) {
-        "2.0.1"
+        "unknown"
     }
 
     override fun onDestroyView() {

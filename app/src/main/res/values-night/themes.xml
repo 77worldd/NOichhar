@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.NOichhar" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.NOichhar" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorPrimaryContainer">@color/primary_container</item>
@@ -41,7 +41,8 @@
         <item name="toolbarStyle">@style/Widget.NOichhar.Toolbar</item>
         <item name="materialButtonStyle">@style/Widget.NOichhar.Button</item>
         <item name="materialSwitchStyle">@style/Widget.NOichhar.Switch</item>
-        <item name="android:fontFamily">sans</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
         <item name="android:lineSpacingExtra">2dp</item>
     </style>
 

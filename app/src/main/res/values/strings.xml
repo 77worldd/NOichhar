@@ -71,7 +71,7 @@
     <string name="notification_channel_name">NOichhar VPN Service</string>
     <string name="notification_channel_desc">Shows when NOichhar protection is active</string>
     <string name="notification_title">NOichhar is active</string>
-    <string name="notification_text">Blocking ads, trackers and DNS bypasses</string>
+    <string name="notification_text">Filtering DNS and supported app requests</string>
     <string name="notification_blocked_count">Blocked %1$d requests</string>
 
     <string name="start_on_boot">Start on boot</string>

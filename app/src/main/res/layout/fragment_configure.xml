@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="100dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/screen_edge" android:paddingEnd="@dimen/screen_edge"
+        android:paddingTop="48dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SETTINGS"
+            android:textColor="@color/text_tertiary"
+            android:textSize="12sp"
+            android:letterSpacing="0.2"
+            app:fontFamily="@font/inter_semibold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Configure"
+            android:textColor="@color/text_white"
+            android:textSize="28sp"
+            app:fontFamily="@font/inter_bold"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="20dp" />
+
+        <com.noichhar.app.ui.widget.GlassCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Start on boot"
+                        android:textColor="@color/text_primary"
+                        app:fontFamily="@font/inter_medium"
+                        android:textSize="15sp" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/sw_boot"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/hairline"
+                    android:background="@color/glass_border" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Enable DNS logging"
+                        android:textColor="@color/text_primary"
+                        app:fontFamily="@font/inter_medium"
+                        android:textSize="15sp" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/sw_logs"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/hairline"
+                    android:background="@color/glass_border" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Block unknown DNS / proxy requests"
+                        android:textColor="@color/text_primary"
+                        app:fontFamily="@font/inter_medium"
+                        android:textSize="15sp" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/sw_unknown"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.noichhar.app.ui.widget.GlassCardView>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:textSize="13sp" android:textColor="@color/text_secondary"
+            android:text="Turning off detailed logging still keeps anonymous per-app request counts for statistics, for up to seven days." />
+
+        <com.noichhar.app.ui.widget.GlassCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="DNS Provider"
+                    android:textColor="@color/text_white"
+                    android:textSize="16sp"
+                    app:fontFamily="@font/inter_semibold"
+                    android:layout_marginBottom="8dp" />
+
+                <RadioGroup
+                    android:id="@+id/rg_dns"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <RadioButton android:id="@+id/rb_system" android:layout_width="match_parent"
+                        android:layout_height="48dp" android:text="System DNS" android:textColor="@color/text_primary" />
+                    <RadioButton android:id="@+id/rb_custom" android:layout_width="match_parent"
+                        android:layout_height="48dp" android:text="Custom (configure below)" android:textColor="@color/text_primary" />
+                    <RadioButton
+                        android:id="@+id/rb_cf"
+                        android:text="Cloudflare 1.1.1.1"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:textColor="@color/text_primary"
+                        app:fontFamily="@font/inter_medium"
+                        android:checked="true" />
+                    <RadioButton
+                        android:id="@+id/rb_g"
+                        android:text="Google 8.8.8.8"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:textColor="@color/text_primary"
+                        app:fontFamily="@font/inter_medium" />
+                    <RadioButton
+                        android:id="@+id/rb_q"
+                        android:text="Quad9 9.9.9.9"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:textColor="@color/text_primary"
+                        app:fontFamily="@font/inter_medium" />
+                    <RadioButton
+                        android:id="@+id/rb_ag"
+                        android:text="AdGuard DNS"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:textColor="@color/text_primary"
+                        app:fontFamily="@font/inter_medium" />
+                </RadioGroup>
+            </LinearLayout>
+        </com.noichhar.app.ui.widget.GlassCardView>
+
+        <TextView android:id="@+id/tv_dns_summary" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:textColor="@color/text_secondary" android:textSize="13sp" />
+        <TextView android:id="@+id/btn_dns_details" android:layout_width="match_parent" android:layout_height="52dp"
+            android:layout_marginTop="12dp" android:gravity="center" android:text="Advanced DNS settings"
+            android:textColor="@color/text_white" android:background="@drawable/bg_action_outline"
+            android:clickable="true" android:focusable="true" />
+        <TextView android:id="@+id/btn_usage_access" android:layout_width="match_parent" android:layout_height="52dp"
+            android:layout_marginTop="10dp" android:gravity="center" android:text="Usage Access settings"
+            android:textColor="@color/text_white" android:background="@drawable/bg_action_outline"
+            android:clickable="true" android:focusable="true" />
+        <TextView android:id="@+id/btn_more_settings" android:layout_width="match_parent" android:layout_height="52dp"
+            android:layout_marginTop="10dp" android:gravity="center" android:text="More protection settings"
+            android:textColor="@color/text_white" android:background="@drawable/bg_action_outline"
+            android:clickable="true" android:focusable="true" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

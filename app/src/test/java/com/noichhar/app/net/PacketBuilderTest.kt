@@ -39,6 +39,17 @@ class PacketBuilderTest {
     }
 
     @Test
+    fun tcpAckUsesExpectedSequenceAndValidChecksum() {
+        val response = PacketBuilder.tcpAck(tcpPacket(), 9000, 1012)
+        assertEquals(40, response.size)
+        assertEquals(TcpSegment.FLAG_ACK, response[33].toInt() and 0xFF)
+        assertEquals(9000L, readInt(response, 24))
+        assertEquals(1012L, readInt(response, 28))
+        assertEquals(0xFFFF, foldedChecksum(response, 0, 20))
+        assertEquals(0xFFFF, foldedChecksum(response, 20, 20, pseudoHeaderSum(response, 20)))
+    }
+
+    @Test
     fun tcpResetAcknowledgesOriginalPayload() {
         val original = tcpPacket()
         val reset = PacketBuilder.tcpReset(original)

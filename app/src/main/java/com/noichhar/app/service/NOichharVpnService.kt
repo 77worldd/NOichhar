@@ -44,6 +44,9 @@ class NOichharVpnService : VpnService() {
     private val dnsCache = DnsCache()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val vpnMutex = Mutex()
+    private val stateLock = Any()
+    private var lifecycleGeneration = 0L
+    @Volatile private var starting = false
 
     @Volatile
     private var isRunning = false
@@ -58,7 +61,8 @@ class NOichharVpnService : VpnService() {
     private var activeBlockedIps: Set<String> = emptySet()
 
     companion object {
-        var instance: NOichharVpnService? = null
+        private val counterLock = Any()
+        @Volatile var instance: NOichharVpnService? = null
             private set
 
         @Volatile
@@ -95,7 +99,7 @@ class NOichharVpnService : VpnService() {
                 if (isRunning) reloadConfiguration() else startVpn()
             }
             Constants.ACTION_REFRESH_APPS -> {
-                if (isRunning) {
+                if (isRunning || starting) {
                     refreshFirewallRules()
                 } else {
                     scope.launch {
@@ -112,35 +116,54 @@ class NOichharVpnService : VpnService() {
     }
 
     private fun startVpn() {
-        if (isRunning) return
-        startForegroundIfNeeded()
+        val generation = synchronized(stateLock) {
+            if (isRunning || starting) return
+            startForegroundIfNeeded()
+            starting = true
+            ++lifecycleGeneration
+        }
         scope.launch {
             vpnMutex.withLock {
-                if (isRunning) return@withLock
                 try {
                     blocklistManager.initialize()
                     firewallManager.refreshAppList()
                     loadCounters()
-                    startAdvancedComponents()
-
-                    val descriptor = createVpnInterface()
-                    if (descriptor == null) {
-                        Logger.e("VPN permission is missing or the interface could not be established")
-                        stopVpn()
-                        return@withLock
+                    synchronized(stateLock) {
+                        if (generation != lifecycleGeneration || !starting) return@withLock
+                        startAdvancedComponents()
                     }
 
-                    vpnInterface = descriptor
-                    isRunning = true
-                    NOichharApp.instance.preferenceManager.vpnEnabled = true
-                    startPacketInterceptor(descriptor)
-                    startNetworkMonitor()
-                    refreshNotification()
-                    broadcastVpnState(true)
-                    Logger.i("VPN started with ${activeBlockedIps.size} shielded IP routes")
+                    // Resolving shield routes can suspend. A stop may arrive while
+                    // it runs, so do not publish a stale TUN descriptor afterwards.
+                    val descriptor = createVpnInterface()
+                    synchronized(stateLock) {
+                        if (generation != lifecycleGeneration || !starting) {
+                            runCatching { descriptor?.close() }
+                            return@withLock
+                        }
+                        if (descriptor == null) {
+                            Logger.e("VPN permission is missing or the interface could not be established")
+                            stopVpn()
+                            return@withLock
+                        }
+                        vpnInterface = descriptor
+                        startPacketInterceptor(descriptor)
+                        startNetworkMonitor()
+                        NOichharApp.instance.trafficTracker.start()
+                        NOichharApp.instance.preferenceManager.vpnEnabled = true
+                        isRunning = true
+                        starting = false
+                        refreshNotification()
+                        broadcastVpnState(true)
+                        Logger.i("VPN started with ${activeBlockedIps.size} shielded IP routes")
+                    }
                 } catch (e: Exception) {
-                    Logger.e("Failed to start VPN", e)
-                    stopVpn()
+                    synchronized(stateLock) {
+                        if (generation == lifecycleGeneration) {
+                            Logger.e("Failed to start VPN", e)
+                            stopVpn()
+                        }
+                    }
                 }
             }
         }
@@ -207,7 +230,10 @@ class NOichharVpnService : VpnService() {
             }.onFailure { Logger.e("Could not enable hostname-aware app filtering", it) }
         }
 
-        runCatching { builder.addDisallowedApplication(packageName) }
+        // The resolver and proxy must use the underlying network rather than
+        // recursively routing the VPN app's own upstream sockets into its TUN.
+        // If this fails, do not establish a broken, self-looping VPN.
+        builder.addDisallowedApplication(packageName)
         builder.establish()
     } catch (e: Exception) {
         Logger.e("Failed to establish VPN", e)
@@ -244,15 +270,18 @@ class NOichharVpnService : VpnService() {
     }
 
     private suspend fun loadCounters() {
-        val dao = NOichharApp.instance.database.dnsLogDao()
-        blockedCount = dao.getBlockedCountSync()
-        allowedCount = dao.getAllowedCountSync()
-        totalCount = dao.getTotalCountSync()
+        val activity = NOichharApp.instance.database.trafficStatDao().activitySince(0L)
+        blockedCount = activity.blocked
+        allowedCount = activity.allowed
+        totalCount = activity.blocked + activity.allowed
     }
 
     private suspend fun onDnsQuery(event: DnsQueryEvent) {
-        if (event.isBlocked) blockedCount++ else allowedCount++
-        totalCount++
+        NOichharApp.instance.trafficTracker.recordQuery(event)
+        synchronized(counterLock) {
+            if (event.isBlocked) blockedCount++ else allowedCount++
+            totalCount++
+        }
 
         if (totalCount % Constants.LOG_PRUNE_INTERVAL == 0L) refreshNotification()
 
@@ -297,25 +326,43 @@ class NOichharVpnService : VpnService() {
     }
 
     fun reloadConfiguration(forceShieldRefresh: Boolean = false) {
-        if (!isRunning) {
+        val generation = synchronized(stateLock) { if (isRunning) lifecycleGeneration else null }
+        if (generation == null) {
             scope.launch { runCatching { networkShield.refreshIfStale(forceShieldRefresh) } }
             return
         }
         scope.launch {
             vpnMutex.withLock {
-                if (!isRunning) return@withLock
-                packetInterceptor?.stop()
-                dnsCache.clear()
-                startAdvancedComponents()
-                val descriptor = createVpnInterface(forceShieldRefresh)
-                if (descriptor == null) {
-                    stopVpn()
-                    return@withLock
+                try {
+                    synchronized(stateLock) {
+                        if (!isRunning || generation != lifecycleGeneration) return@withLock
+                        packetInterceptor?.stop()
+                        dnsCache.clear()
+                        startAdvancedComponents()
+                    }
+                    val descriptor = createVpnInterface(forceShieldRefresh)
+                    synchronized(stateLock) {
+                        if (!isRunning || generation != lifecycleGeneration) {
+                            runCatching { descriptor?.close() }
+                            return@withLock
+                        }
+                        if (descriptor == null) {
+                            stopVpn()
+                            return@withLock
+                        }
+                        runCatching { vpnInterface?.close() }
+                        vpnInterface = descriptor
+                        startPacketInterceptor(descriptor)
+                        Logger.i("VPN configuration reloaded")
+                    }
+                } catch (e: Exception) {
+                    synchronized(stateLock) {
+                        if (generation == lifecycleGeneration) {
+                            Logger.e("Failed to reload VPN configuration", e)
+                            stopVpn()
+                        }
+                    }
                 }
-                runCatching { vpnInterface?.close() }
-                vpnInterface = descriptor
-                startPacketInterceptor(descriptor)
-                Logger.i("VPN configuration reloaded")
             }
         }
     }
@@ -331,12 +378,15 @@ class NOichharVpnService : VpnService() {
         }
     }
 
-    fun stopVpn() {
+    fun stopVpn() = synchronized(stateLock) {
+        lifecycleGeneration++
+        starting = false
         isRunning = false
         NOichharApp.instance.preferenceManager.vpnEnabled = false
 
         packetInterceptor?.stop()
         packetInterceptor = null
+        NOichharApp.instance.trafficTracker.stop()
         networkMonitor?.stop()
         networkMonitor = null
         localFilterProxy?.stop()

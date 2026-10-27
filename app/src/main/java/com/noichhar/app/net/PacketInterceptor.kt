@@ -2,7 +2,7 @@ package com.noichhar.app.net
 
 import android.content.Context
 import android.os.ParcelFileDescriptor
-import com.noichhar.app.blocker.DomainBlocker
+import com.noichhar.app.blocker.EnhancedBlocklistEngine
 import com.noichhar.app.dns.DnsCache
 import com.noichhar.app.dns.DnsPacketParser
 import com.noichhar.app.dns.DnsResolver
@@ -42,7 +42,7 @@ data class DnsQueryEvent(
 class PacketInterceptor(
     private val context: Context,
     private val vpnFileDescriptor: ParcelFileDescriptor,
-    private val domainBlocker: DomainBlocker,
+    private val domainBlocker: EnhancedBlocklistEngine,
     private val dnsCache: DnsCache,
     private val preferenceManager: PreferenceManager,
     private val firewallManager: FirewallManager,
@@ -95,22 +95,20 @@ class PacketInterceptor(
                 val destination = packet.destAddress.hostAddress
 
                 if (packet.isDnsTarget() && packet.isDnsQuery()) {
-                    val segment = packet.tcpSegment()
-                    if (packet.isTcpDnsQuery() && segment != null) {
-                        if (segment.hasFlag(TcpSegment.FLAG_SYN)) {
-                            handleTcpSyn(packet, segment, outputStream)
-                            continue
+                    if (packet.isTcpDnsQuery()) {
+                        val segment = packet.tcpSegment() ?: continue
+                        when {
+                            segment.hasFlag(TcpSegment.FLAG_SYN) -> handleTcpSyn(packet, segment, outputStream)
+                            segment.hasFlag(TcpSegment.FLAG_RST) -> tcpSessions.remove(sessionKey(packet))
+                            segment.hasFlag(TcpSegment.FLAG_FIN) -> handleTcpFin(packet, segment, outputStream)
+                            segment.payload.isNotEmpty() -> handleTcpData(packet, segment, outputStream)
                         }
-                        if (segment.hasFlag(TcpSegment.FLAG_RST) || segment.hasFlag(TcpSegment.FLAG_FIN)) {
-                            tcpSessions.remove(sessionKey(packet))
-                            continue
-                        }
-                    }
-                    val dnsPayload = packet.getDnsPayload() ?: continue
-                    val tcpSegment = if (packet.isTcpDnsQuery()) segment else null
-                    scope.launch {
-                        dnsSemaphore.withPermit {
-                            handleDnsPacket(packet, tcpSegment, dnsPayload, outputStream)
+                    } else {
+                        val dnsPayload = packet.getDnsPayload() ?: continue
+                        scope.launch {
+                            dnsSemaphore.withPermit {
+                                handleDnsPacket(packet, null, dnsPayload, outputStream)
+                            }
                         }
                     }
                 } else if (destination != null && destination in blockedIps) {
@@ -128,24 +126,62 @@ class PacketInterceptor(
     }
 
     private fun handleTcpSyn(packet: IPPacket, segment: TcpSegment, outputStream: FileOutputStream) {
-        val initialSequence = Random.nextLong(1L, 0xFFFFFFFFL)
-        val acknowledgement = segment.nextSequenceNumber()
-        tcpSessions[sessionKey(packet)] = TcpDnsSession(
-            nextSequence = (initialSequence + 1L) and 0xFFFFFFFFL,
-            createdAt = System.currentTimeMillis()
-        )
-        val response = PacketBuilder.tcpSynAck(packet, initialSequence, acknowledgement)
-        synchronized(outputLock) {
-            outputStream.write(response)
-            outputStream.flush()
+        val key = sessionKey(packet)
+        val initialClient = (segment.sequenceNumber + 1L) and 0xFFFFFFFFL
+        val existing = tcpSessions[key]
+        val session = if (existing != null && existing.initialClientSequence == initialClient) {
+            existing // Retransmit the same SYN-ACK if the first one was lost.
+        } else {
+            if (tcpSessions.size >= MAX_TCP_SESSIONS) {
+                pruneTcpSessions()
+                if (tcpSessions.size >= MAX_TCP_SESSIONS) {
+                    synchronized(outputLock) { outputStream.write(PacketBuilder.tcpReset(packet)); outputStream.flush() }
+                    return
+                }
+            }
+            val initialServer = Random.nextLong(1L, 0xFFFFFFFFL)
+            TcpDnsSession((initialServer + 1L) and 0xFFFFFFFFL, initialClient).also { tcpSessions[key] = it }
         }
+        val response = PacketBuilder.tcpSynAck(packet, (session.nextSequence - 1L) and 0xFFFFFFFFL, initialClient)
+        synchronized(outputLock) { outputStream.write(response); outputStream.flush() }
+    }
+
+    private fun handleTcpData(packet: IPPacket, segment: TcpSegment, outputStream: FileOutputStream) {
+        val key = sessionKey(packet)
+        val session = tcpSessions[key] ?: run {
+            synchronized(outputLock) { outputStream.write(PacketBuilder.tcpReset(packet)); outputStream.flush() }
+            return
+        }
+        val received = session.receive(segment.sequenceNumber, segment.payload)
+        if (received.invalid) {
+            tcpSessions.remove(key, session)
+            synchronized(outputLock) { outputStream.write(PacketBuilder.tcpReset(packet)); outputStream.flush() }
+            return
+        }
+        // ACK every accepted fragment (or the next expected sequence for a gap)
+        // so the sender can transmit the remainder instead of stalling under Nagle.
+        val ack = PacketBuilder.tcpAck(packet, session.nextSequence, session.clientNextSequence)
+        synchronized(outputLock) { outputStream.write(ack); outputStream.flush() }
+        received.query?.let { query ->
+            scope.launch {
+                dnsSemaphore.withPermit { handleDnsPacket(packet, segment, query, outputStream, session) }
+            }
+        }
+    }
+
+    private fun handleTcpFin(packet: IPPacket, segment: TcpSegment, outputStream: FileOutputStream) {
+        val session = tcpSessions.remove(sessionKey(packet))
+        val sequence = session?.nextSequence ?: segment.acknowledgementNumber
+        val ack = PacketBuilder.tcpAck(packet, sequence, segment.nextSequenceNumber())
+        synchronized(outputLock) { outputStream.write(ack); outputStream.flush() }
     }
 
     private suspend fun handleDnsPacket(
         packet: IPPacket,
         tcpSegment: TcpSegment?,
         dnsPayload: ByteArray,
-        outputStream: FileOutputStream
+        outputStream: FileOutputStream,
+        tcpSession: TcpDnsSession? = null
     ) {
         val question = DnsPacketParser.parseQuestion(dnsPayload) ?: return
         val domain = question.name
@@ -163,7 +199,7 @@ class PacketInterceptor(
         var blockReason = firewallDecision.reason
         var response: ByteArray = if (blocked) {
             DnsPacketParser.createNxDomainResponse(dnsPayload)
-        } else if (domainBlocker.isBlocked(domain)) {
+        } else if (preferenceManager.protectionMode.domainFiltering && domainBlocker.isBlocked(domain)) {
             blocked = true
             blockReason = domainBlocker.getBlockReason(domain) ?: "Blocklist rule"
             DnsPacketParser.createNxDomainResponse(dnsPayload)
@@ -177,7 +213,8 @@ class PacketInterceptor(
                     DnsPacketParser.createServFailResponse(dnsPayload)
                 } else {
                     val blockedAlias = DnsPacketParser.parseAnswerNames(upstream)
-                        .firstOrNull { alias -> alias != domain.lowercase() && domainBlocker.isBlocked(alias) }
+                        .firstOrNull { alias -> preferenceManager.protectionMode.domainFiltering &&
+                            alias != domain.lowercase() && domainBlocker.isBlocked(alias) }
                     if (blockedAlias != null) {
                         blocked = true
                         blockReason = "Blocked upstream alias: $blockedAlias"
@@ -196,7 +233,7 @@ class PacketInterceptor(
             response = DnsPacketParser.createServFailResponse(dnsPayload)
         }
 
-        writeDnsResponse(packet, tcpSegment, response, outputStream)
+        writeDnsResponse(packet, tcpSegment, response, outputStream, tcpSession)
 
         onDnsQuery(
             DnsQueryEvent(
@@ -216,14 +253,15 @@ class PacketInterceptor(
         packet: IPPacket,
         tcpSegment: TcpSegment?,
         dnsResponse: ByteArray,
-        outputStream: FileOutputStream
+        outputStream: FileOutputStream,
+        tcpSession: TcpDnsSession?
     ) {
         val responsePacket = if (packet.isTcpDnsQuery()) {
             val segment = tcpSegment ?: return
-            val session = tcpSessions.remove(sessionKey(packet))
-            val sequence = session?.nextSequence
+            if (tcpSession != null) tcpSessions.remove(sessionKey(packet), tcpSession)
+            val sequence = tcpSession?.nextSequence
                 ?: (segment.acknowledgementNumber and 0xFFFFFFFFL)
-            val acknowledgement = segment.nextSequenceNumber()
+            val acknowledgement = tcpSession?.clientNextSequence ?: segment.nextSequenceNumber()
             PacketBuilder.tcpDnsResponse(
                 original = packet,
                 dnsResponse = dnsResponse,
@@ -307,8 +345,7 @@ class PacketInterceptor(
         if (lastBlockedIpLog.size > 2_000) lastBlockedIpLog.clear()
     }
 
-    private data class TcpDnsSession(
-        val nextSequence: Long,
-        val createdAt: Long
-    )
+    private companion object {
+        const val MAX_TCP_SESSIONS = 1024
+    }
 }

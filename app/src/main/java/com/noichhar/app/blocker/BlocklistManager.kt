@@ -10,9 +10,7 @@ import com.noichhar.app.util.Constants
 import com.noichhar.app.util.DomainValidator
 import com.noichhar.app.util.Logger
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -23,23 +21,27 @@ class BlocklistManager(
     private val context: Context,
     private val database: NOichharDatabase
 ) {
-    val domainBlocker = DomainBlocker()
+    val domainBlocker = EnhancedBlocklistEngine()
 
     private val appContext = context.applicationContext
     private val dao = database.blocklistDao()
     private val preferences = NOichharApp.instance.preferenceManager
     private val parser = HostsFileParser()
     private val initMutex = Mutex()
+    private val updateMutex = Mutex()
+    private val changeMutex = Mutex()
 
     @Volatile
     private var initialized = false
 
     suspend fun initialize() = withContext(Dispatchers.IO) {
         initMutex.withLock {
-            if (initialized) return@withLock
-            if (dao.getCountSync() == 0) loadDefaultBlocklist()
-            loadFromDatabase()
-            initialized = true
+            if (!initialized) changeMutex.withLock {
+                if (dao.getCountSync() == 0) loadDefaultBlocklist()
+                loadFromDatabaseUnlocked()
+                initialized = true
+            }
+            Unit
         }
     }
 
@@ -70,7 +72,9 @@ class BlocklistManager(
         Logger.i("Loaded ${entries.size} built-in filter entries")
     }
 
-    suspend fun loadFromDatabase() = withContext(Dispatchers.IO) {
+    suspend fun loadFromDatabase() = changeMutex.withLock { loadFromDatabaseUnlocked() }
+
+    private suspend fun loadFromDatabaseUnlocked() = withContext(Dispatchers.IO) {
         val entries = dao.getAllSync()
         val rules = ArrayList<BlockRule>(entries.size)
         for (entry in entries) {
@@ -81,7 +85,8 @@ class BlocklistManager(
                 wildcard = entry.isWildcard,
                 allow = entry.source == SOURCE_ALLOW ||
                     entry.source == SOURCE_ESSENTIAL ||
-                    entry.source == SOURCE_ALLOW_USER
+                    entry.source == SOURCE_ALLOW_USER,
+                user = entry.isUserAdded
             )
         }
         domainBlocker.loadRules(rules)
@@ -95,9 +100,13 @@ class BlocklistManager(
             isWildcard = rule.wildcard,
             isUserAdded = true
         )
-        dao.insert(entry)
-        domainBlocker.addDomain(DomainValidator.display(rule))
-        true
+        changeMutex.withLock {
+            withContext(NonCancellable) {
+                dao.insert(entry)
+                loadFromDatabaseUnlocked()
+                true
+            }
+        }
     }
 
     suspend fun addCustomAllowDomain(rawDomain: String, includeSubdomains: Boolean = false): Boolean = withContext(Dispatchers.IO) {
@@ -109,40 +118,48 @@ class BlocklistManager(
             isWildcard = wildcard,
             isUserAdded = true
         )
-        dao.insert(entry)
-        loadFromDatabase()
-        true
+        changeMutex.withLock {
+            withContext(NonCancellable) {
+                dao.insert(entry)
+                loadFromDatabaseUnlocked()
+                true
+            }
+        }
     }
 
     suspend fun removeDomain(rawDomain: String) = withContext(Dispatchers.IO) {
         val rule = DomainValidator.normalize(rawDomain) ?: return@withContext
-        dao.deleteUserDomain(rule.domain)
-        domainBlocker.removeDomain(DomainValidator.display(rule))
-        loadFromDatabase()
+        changeMutex.withLock {
+            withContext(NonCancellable) {
+                dao.deleteUserDomain(rule.domain)
+                loadFromDatabaseUnlocked()
+            }
+        }
     }
 
-    suspend fun updateBlocklists(urls: List<String> = Constants.DEFAULT_BLOCKLIST_URLS): Int = withContext(Dispatchers.IO) {
+    suspend fun updateBlocklists(urls: List<String> = Constants.DEFAULT_BLOCKLIST_URLS): Int =
+        updateMutex.withLock { updateBlocklistsInternal(urls) }
+
+    private suspend fun updateBlocklistsInternal(urls: List<String>): Int = withContext(Dispatchers.IO) {
         val builtIn = readBuiltInRules()
-        val remote = coroutineScope {
-            urls.map { url ->
-                async(Dispatchers.IO) { parser.downloadAndParseRules(url) }
-            }.awaitAll()
-        }
-
-        val blocked = LinkedHashSet<String>(Constants.MAX_BLOCKLIST_ENTRIES)
-        val allowed = LinkedHashSet<String>(Constants.MAX_ALLOWLIST_ENTRIES)
-
+        val blocked = LinkedHashSet<String>()
+        val allowed = LinkedHashSet<String>()
         builtIn.blocked.forEach { rule -> if (blocked.size < Constants.MAX_BLOCKLIST_ENTRIES) blocked += rule }
         builtIn.allowed.forEach { rule -> if (allowed.size < Constants.MAX_ALLOWLIST_ENTRIES) allowed += rule }
-        remote.forEach { parsed ->
-            parsed.blocked.forEach { rule ->
-                if (blocked.size < Constants.MAX_BLOCKLIST_ENTRIES) blocked += rule
-            }
-            parsed.allowed.forEach { rule ->
-                if (allowed.size < Constants.MAX_ALLOWLIST_ENTRIES) allowed += rule
-            }
+
+        var downloadedAny = false
+        for (url in urls) {
+            val remaining = Constants.MAX_BLOCKLIST_ENTRIES - blocked.size
+            if (remaining <= 0) break
+            val parsed = parser.downloadAndParseRules(url, remaining + Constants.MAX_ALLOWLIST_ENTRIES)
+            if (parsed.total > 0) downloadedAny = true
+            parsed.blocked.forEach { if (blocked.size < Constants.MAX_BLOCKLIST_ENTRIES) blocked += it }
+            parsed.allowed.forEach { if (allowed.size < Constants.MAX_ALLOWLIST_ENTRIES) allowed += it }
         }
-        if (blocked.isEmpty()) return@withContext 0
+        if (!downloadedAny) {
+            Logger.w("All blocklist downloads failed or were empty; keeping the existing rules")
+            return@withContext 0
+        }
 
         val allowedKeys = allowed.mapNotNull { DomainValidator.normalize(it)?.domain }.toHashSet()
         val downloaded = LinkedHashMap<String, BlocklistEntry>(blocked.size + allowed.size + 256)
@@ -171,21 +188,25 @@ class BlocklistManager(
             )
         }
 
-        // User rules are applied last so they override downloaded exceptions,
-        // downloaded blocks and the built-in essential allowlist.
-        val finalEntries = LinkedHashMap<String, BlocklistEntry>(downloaded.size + 256)
-        finalEntries.putAll(downloaded)
-        dao.getUserEntriesSync().forEach { entry -> finalEntries[entry.domain] = entry }
-
-        database.withTransaction {
-            dao.deleteNonUserEntries()
-            chunkedInsert(finalEntries.values.filter { !it.isUserAdded })
+        // Serialize the transaction and snapshot publication with user edits so
+        // a stale snapshot cannot overwrite a newer user rule. Downloads above
+        // do not hold this lock, so adding a rule remains responsive.
+        changeMutex.withLock {
+            withContext(NonCancellable) {
+                database.withTransaction {
+                    dao.deleteNonUserEntries()
+                    chunkedInsert(downloaded.values.toList())
+                }
+                blocked.clear()
+                allowed.clear()
+                downloaded.clear()
+                loadFromDatabaseUnlocked()
+                preferences.lastBlocklistUpdate = System.currentTimeMillis()
+                val count = dao.getCountSync()
+                Logger.i("Updated blocklist with $count entries")
+                count
+            }
         }
-
-        loadFromDatabase()
-        preferences.lastBlocklistUpdate = System.currentTimeMillis()
-        Logger.i("Updated blocklist with ${finalEntries.size} entries")
-        finalEntries.size
     }
 
     suspend fun getShieldDomains(limit: Int = 800): List<String> = withContext(Dispatchers.IO) {

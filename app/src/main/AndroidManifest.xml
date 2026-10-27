@@ -11,6 +11,8 @@
         tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".NOichharApp"
@@ -35,6 +37,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".ui.activity.DetailActivity" android:exported="false"
+            android:parentActivityName=".ui.activity.MainActivity" />
 
         <activity
             android:name=".ui.activity.SettingsActivity"
@@ -63,7 +68,7 @@
                 android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON"
                 android:value="true" />
             <property
-                android:name="android.android.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Local DNS filtering and ad blocking" />
         </service>
 

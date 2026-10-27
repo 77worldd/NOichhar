@@ -49,12 +49,13 @@ object Constants {
     const val MAX_DNS_CACHE_TTL_SECONDS = 3600L
     const val BLOCKLIST_UPDATE_INTERVAL_MS = 12 * 60 * 60 * 1000L
     const val NETWORK_SHIELD_REFRESH_INTERVAL_MS = 12 * 60 * 60 * 1000L
-    const val MAX_BLOCKLIST_ENTRIES = 180_000
+    const val MAX_BLOCKLIST_ENTRIES = 500_000
     const val MAX_ALLOWLIST_ENTRIES = 20_000
     const val MAX_NETWORK_SHIELD_ROUTES = 420
     const val NETWORK_SHIELD_RESOLVE_TIMEOUT_MS = 6_000L
 
     const val PREF_NAME = "noichhar_prefs"
+    const val PREF_PROTECTION_MODE = "protection_mode"
     const val PREF_VPN_ENABLED = "vpn_enabled"
     const val PREF_DNS_PROVIDER = "dns_provider"
     const val PREF_DNS_PROTOCOL = "dns_protocol"
@@ -76,16 +77,16 @@ object Constants {
     const val WORK_BLOCKLIST_PERIODIC = "noichhar-blocklist-periodic"
     const val WORK_BLOCKLIST_IMMEDIATE = "noichhar-blocklist-immediate"
 
-    val DEFAULT_BLOCKLIST_URLS: List<String> = listOf(
-        "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.mini.txt",
-        "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-        "https://raw.githubusercontent.com/AdAway/adaway.github.io/master/hosts.txt"
-    )
+    val DEFAULT_BLOCKLIST_URLS: List<String> = com.noichhar.app.blocker.BlocklistSources.ALL
 
     val PROTECTED_DNS_IPS: Set<String> = setOf(
         "1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "149.112.112.112",
         "94.140.14.14", "94.140.15.15", "208.67.222.222", "208.67.220.220"
     )
+
+    enum class ProtectionMode(val domainFiltering: Boolean, val appRules: Boolean) {
+        DNS_ONLY(true, false), APP_RULES_ONLY(false, true), BOTH(true, true)
+    }
 
     enum class DnsProvider {
         SYSTEM, CLOUDFLARE, GOOGLE, QUAD9, ADGUARD, CUSTOM

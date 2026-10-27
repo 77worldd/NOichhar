@@ -54,6 +54,15 @@ object PacketBuilder {
             payload = ByteArray(0)
         )
 
+    fun tcpAck(original: IPPacket, sequenceNumber: Long, acknowledgementNumber: Long): ByteArray =
+        buildTcpResponse(
+            original = original,
+            sequenceNumber = sequenceNumber,
+            acknowledgementNumber = acknowledgementNumber,
+            flags = TcpSegment.FLAG_ACK,
+            payload = ByteArray(0)
+        )
+
     fun tcpReset(original: IPPacket): ByteArray {
         val segment = original.tcpSegment()
         val acknowledgement = segment?.nextSequenceNumber() ?: 0L

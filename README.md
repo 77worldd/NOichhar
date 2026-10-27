@@ -1,132 +1,54 @@
 # NOichhar
 
-NOichhar is a clean, local DNS and app-traffic filter for Android. It uses Android's `VpnService` to filter DNS requests locally and, in Maximum mode, adds hostname-aware filtering for compatible apps plus route-level protection against known ad-server IPs. It does **not** use a remote proxy, decrypt HTTPS, require root, require an account, or install a user CA certificate.
+NOichhar is a privacy-focused Android DNS and app-request filter. It uses Android's local `VpnService`; no root, account, remote proxy, HTTPS decryption or user CA is needed. The application ID remains `com.noichhar.app`.
 
-Version **2.0.1** is a stability patch on top of the Maximum Protection upgrade: stronger in-app ad blocking, automatic fresh filter lists, a calmer Material 3 interface, and accessibility.
+## Obsidian Minimalism (v2.1.0)
 
-## Highlights
+- A dark, raven-branded interface with a breathing shield, live device throughput, a 24-hour activity heatmap, a floating five-tab navigation bar and an adaptive launcher icon.
+- **Home:** seven-day allowed/blocked filtered-request totals and a heatmap built from recorded events—not simulated data.
+- **Stats:** 1-hour, 24-hour and 7-day windows, per-UID request rankings, a radial chart and optional Android network-usage totals. The cache button clears the VPN's DNS cache; it does not claim to close unrelated connections.
+- **RPN:** update the six configured lists, add domain rules, manage block/allow and app rules, or choose DNS filtering, app rules, or both. App rules apply to requests the app can actually observe.
+- **Configure:** persistent preferences, provider choices, advanced DNS settings and Usage Access. **About** reads the installed version.
+- A version-2 Room database with a non-destructive migration. Existing app rules, lists and logs are preserved, and existing DNS events are copied into anonymous aggregate statistics.
+- A bounded 500,000-domain update pipeline, Bloom-filter-assisted immutable lookup snapshots, DNS/Adblock/hosts parsing, user exceptions and an offline starter list. If every download fails, the existing list is retained.
 
-- **Layered filtering**
-  - Local DNS filtering with exact, parent-domain, wildcard and user rules.
-  - DNS over UDP **and DNS over TCP on port 53** answered by the local resolver.
-  - Hostname-aware HTTP/HTTPS filtering for apps that honour Android's VPN HTTP-proxy recommendation on Android 10+.
-  - Route-level IP shield for high-value ad, tracker and encrypted-DNS-bypass servers.
-  - CNAME/alias inspection so a blocked upstream alias cannot leak through an allowed name.
-- **Fresh, real filter lists**
-  - Curated offline list with thousands of common mobile ad and tracker domains.
-  - Automatic 12-hour updates from HaGeZi Multi PRO mini, StevenBlack Unified hosts and AdAway hosts.
-  - Robust hosts, plain-domain, compressed-hosts and Adblock Plus rule parsing.
-  - Exception rules, essential-service allowlist and user-defined allow rules.
-  - User rules always override downloaded rules.
-- **Secure upstreams**
-  - DNS over HTTPS, DNS over TLS, plain DNS, System DNS and validated custom endpoints.
-  - Transaction-ID-safe DNS caching that respects upstream TTLs.
-  - Optional blocking of well-known hard-coded encrypted-DNS resolvers.
-- **App controls**
-  - Per-app internet, Wi-Fi, mobile-data and locked-screen DNS decisions.
-  - Boot start, package-change refresh, lockdown mode, network monitoring and notification stop action.
-- **Logs and privacy**
-  - Searchable DNS and blocked-connection decisions, clear logs and CSV export.
-  - Logs stay on the device. No analytics, advertising SDKs, accounts or remote proxy.
-- **Clean Android UI**
-  - Cohesive deep-teal and slate Material 3 palette with light/dark themes.
-  - One-tap Balanced/Maximum protection selector.
-  - Large touch targets, labelled controls, readable contrast and Android font-scaling support.
-  - Smooth layout transitions, tinted status cards and adaptive launcher icons.
-- **Verified build**
-  - JVM unit tests, XML validation and Android CI builds on every push.
-  - Signed official releases with SHA-256 checksums and signing-key continuity checks.
+## Requirements and build
 
-## Requirements
-
-- Android 7.0 (API 24) or newer.
-- Android Studio with JDK 17 for local development.
-- Android SDK Platform 34 and Build Tools 34.0.0.
-- No root access.
-- Hostname-aware app filtering requires Android 10 (API 29) or newer.
-
-## Build
+Android 7.0 (API 24) or newer. Hostname-aware proxy filtering requires Android 10+. Build with JDK 17, Android SDK Platform 34 and Build Tools 34.0.0:
 
 ```bash
+./gradlew clean
 ./gradlew testDebugUnitTest assembleDebug assembleRelease
 ```
 
-Outputs:
-
-```text
-app/build/outputs/apk/debug/app-debug.apk
-app/build/outputs/apk/release/app-release-unsigned.apk
-```
-
-Official release APKs are aligned, signed, checked against the v2.0.0 signing certificate, and published by `.github/workflows/ci.yml`. `.github/workflows/release.yml` provides the tag/manual release path. The signing key is generated once inside GitHub Actions cache and is never committed to the repository.
+The local release output is `app/build/outputs/apk/release/app-release-unsigned.apk`. Official releases are produced by `.github/workflows/release.yml`, which builds, tests, aligns, signs and verifies the APK, checks its certificate against v2.0.0, and publishes a SHA-256 checksum. The workflow refuses to create a replacement signing key if the official key is unavailable.
 
 ## First run
 
-1. Install the signed APK from the [releases page](https://github.com/77worldd/NOichhar/releases).
-2. Open the app and accept Android's VPN connection request.
-3. On the **Home** screen, choose **Balanced** or **Maximum** protection. Maximum is selected by default.
-4. In the **DNS** tab, choose a provider and protocol.
-5. If Android **Private DNS** is enabled, use the button on the DNS screen to open network settings and turn it off.
-6. Return to **Home** and tap **START**.
+1. Install the signed APK from [Releases](https://github.com/77worldd/NOichhar/releases), open it, and tap **Activate**. Accept the Android VPN prompt.
+2. Choose a DNS provider in **Configure**, or open **Advanced DNS settings** for DoH, DoT, plain, system and custom endpoints. Disable Android Private DNS if it bypasses the local resolver.
+3. Use **RPN** for protection mode, blocklists and custom rules. An initial bundled list works offline; full lists are downloaded from their publishers when updates succeed.
+4. To see per-app bandwidth, open **Stats → Grant Usage Access** and allow NOichhar in Android's special-access settings. Protection must be active while samples are collected.
 
-## How it works
+## What the statistics mean
 
-NOichhar creates a VPN interface with address `10.111.222.1/32` and DNS server `10.111.222.3/32`. Only that virtual DNS address, plus a bounded set of shielded ad-server IPs, is routed into the TUN interface. DNS packets are parsed locally, checked against firewall, blocklist and allowlist rules, resolved through the configured upstream, cached and written back to the requesting app.
+- The live upload/download rate is **device-wide** `TrafficStats`, not VPN-only bandwidth.
+- App bandwidth comes from Android `NetworkStatsManager` when Usage Access is granted. It is sampled while protection is active and retained on the device for seven days; background cleanup is subject to Android scheduling and may be delayed if the app is force-stopped. Android can report coarse or delayed buckets; mobile data may be unavailable due to platform/device permissions. On Android 7, Wi-Fi/mobile transport is used as an estimate of metered status. Shared UIDs are reported together.
+- Request counts come from actual DNS, supported HTTP proxy and shield events. They are **filtered requests**, not live socket or active-connection counts. The heatmap uses 120 twelve-minute buckets from those events.
+- Detailed request logging can be disabled in Configure; aggregate counts without domains or IP addresses are still kept for the statistics and heatmap. Detailed logs and aggregates stay on-device.
 
-Maximum mode also starts a loopback HTTP proxy and registers it with Android's `VpnService.Builder.setHttpProxy()` on Android 10+. For apps that honour the system proxy, HTTPS `CONNECT` hostnames and plain HTTP `Host` headers are checked against the same rules before a protected upstream socket is opened. This catches many in-app ad requests without decrypting TLS.
+## How protection works and its limits
 
-The app identifies the UID of DNS sockets on Android 10+ with `ConnectivityManager.getConnectionOwnerUid`, with a `/proc/net` fallback for older Android versions. App and locked-screen rules therefore operate on real requests rather than visual placeholders.
+The VPN routes its virtual DNS address and a bounded set of protected IPv4 addresses into the local TUN interface. System DNS traffic sent to the VPN's virtual resolver is handled over UDP and TCP port 53 (including fragmented TCP queries); it is checked against the active rule snapshot, resolved through the selected upstream, cached, and answered locally. Most other traffic remains on the device's normal network path, so the app does not relay every packet through userspace.
 
-The network shield resolves a bounded list of high-value ad/tracker domains, subtracts IPs used by essential first-party services and public DNS resolvers, and installs only safe IPv4 `/32` routes. TCP packets to those addresses are rejected with a RST; UDP packets are dropped. Normal traffic remains on the device's normal network path, so NOichhar does not relay every packet through userspace.
+The optional advanced layer registers a local HTTP proxy for apps that honour Android's proxy recommendation, and can block selected safe-to-route IPv4 addresses. Apps using hard-coded DNS servers, encrypted DNS, QUIC, custom sockets, direct IPs, or IPv6 can bypass some or all filtering. Android Private DNS may bypass the local DNS server. The app does not filter HTTPS content or remove cosmetic ad spaces; domains that serve both content and ads cannot be separated by DNS alone. Android permits only one active VPN at a time. These limitations also mean NOichhar cannot truthfully close or count all device connections.
 
-## Honest limitations
+## Privacy and sources
 
-- `setHttpProxy()` is a recommendation, not a guarantee. Apps with custom networking stacks, hard-coded DNS-over-HTTPS, QUIC/HTTP-3 or raw sockets can ignore it.
-- DNS-only and route-based filtering cannot remove ad placeholders or block ads served from the same hostname as content. NOichhar does not perform cosmetic filtering or HTTPS interception.
-- Direct connections to unknown IP addresses are outside the DNS and IP-shield model.
-- Android Private DNS can bypass the local DNS server; the DNS screen warns when it is enabled.
-- IPv6 DNS and direct IPv6 connections are not intercepted. On IPv6-only networks, filtering may be incomplete.
-- A local VPN still occupies Android's single active VPN slot, so it cannot normally run alongside another VPN app.
-- Blocking hard-coded encrypted DNS is optional because some legitimate apps rely on their own resolver. If an app stops working, add its domain to **Firewall → Allowed domains** or disable **Block encrypted-DNS bypass**.
+Rules are evaluated locally; the chosen DNS resolver receives upstream queries and public blocklist publishers receive update requests. The optional loopback proxy listens only on the device. There is no analytics SDK or remote proxy. The bundled Inter font is distributed under the SIL Open Font License in `app/src/main/assets/brand/INTER_OFL.txt`.
 
-## Project layout
-
-```text
-app/src/main/java/com/noichhar/app/
-├── blocker/     filter-list download, parsing, matching and updates
-├── database/    Room entities, DAOs and database
-├── dns/         DNS wire parser, TTL-aware cache and upstream resolvers
-├── net/         IPv4/TCP/UDP packet handling, local proxy and network shield
-├── receiver/    boot and package-change receivers
-├── service/     VPN, firewall policy and connection logging
-├── ui/          activities, fragments, adapters, dialogs and view models
-└── util/        preferences, constants, notifications and validators
-
-app/src/main/res/raw/ curated offline filters, allowlist, DNS-bypass and shield domains
-app/src/main/res/     layouts, Material 3 themes, icons and accessibility resources
-app/src/test/         JVM unit tests
-.github/workflows     CI and official signed release
-docs/                 original complete implementation specification
-```
-
-## Filter-list attribution
-
-The offline list and automatic updates use publicly maintained community sources, including:
-
-- [HaGeZi DNS Blocklists](https://github.com/hagezi/dns-blocklists) — GPL-3.0.
-- [StevenBlack/hosts](https://github.com/StevenBlack/hosts) — MIT.
-- [AdAway default hosts](https://github.com/AdAway/adaway.github.io) — CC BY 3.0.
-
-The shipped subset is stored in `app/src/main/res/raw/default_blocklist.txt` with attribution. Full lists are downloaded by the app on a periodic, unmetered-network schedule.
-
-## Privacy
-
-DNS filtering, hostname checks and logs happen on the device. NOichhar does not include analytics, advertising SDKs, accounts, or a remote proxy. Blocklist updates download public filter files directly from the configured sources. The local HTTP proxy listens only on `127.0.0.1`.
+Automatic updates are configured for [HaGeZi](https://github.com/hagezi/dns-blocklists), [StevenBlack hosts](https://github.com/StevenBlack/hosts), [AdGuard DNS filter](https://github.com/AdguardTeam/AdGuardSDNSFilter), [OISD](https://oisd.nl/), [1Hosts](https://github.com/badmojr/1Hosts), and [Peter Lowe's list](https://pgl.yoyo.org/adservers/). The built-in list's attributions are included in `app/src/main/res/raw/default_blocklist.txt`. Updates are bounded, run in the background, and preserve user-added rules.
 
 ## Verification
 
-```bash
-./gradlew testDebugUnitTest
-```
-
-The CI workflow also validates all XML resources before building. Both official release paths run the same tests, build a minified release APK, align and sign it with `apksigner`, verify the signature and signing-key continuity, and publish the APK with a SHA-256 checksum.
+CI validates XML, runs JVM tests including 500,000-domain and atomic-reload coverage, and performs clean debug and release builds. Android instrumentation tests on API 24 and 29 cover database migration, aggregate queries, mode/settings persistence, five-tab navigation, real local VPN start/stop and blocked DNS requests over UDP and TCP port 53. No test can establish universal filtering across all Android devices or traffic that bypasses the operating system's VPN DNS/proxy configuration.
