@@ -12,7 +12,18 @@ import java.nio.charset.StandardCharsets;
 
 /** Runs as the shell UID, not the VPN app UID (which is intentionally excluded from its own VPN). */
 public final class DnsProbe {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
+        try {
+            runProbe(args);
+            // app_process may otherwise retain framework threads after main returns.
+            System.exit(0);
+        } catch (Throwable failure) {
+            failure.printStackTrace(System.out);
+            System.exit(1);
+        }
+    }
+
+    private static void runProbe(String[] args) throws Exception {
         InetAddress dns = InetAddress.getByName(args[0]);
         byte[] query = query(args[1]);
         try (DatagramSocket socket = new DatagramSocket()) {
@@ -34,8 +45,6 @@ public final class DnsProbe {
             check(response, response.length);
             System.out.println("TCP_BLOCKED_OK");
         }
-        // app_process may otherwise retain framework threads after main returns.
-        System.exit(0);
     }
 
     private static byte[] query(String domain) throws Exception {

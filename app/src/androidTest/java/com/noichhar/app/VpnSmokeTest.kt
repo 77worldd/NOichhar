@@ -63,8 +63,10 @@ class VpnSmokeTest {
                     // service excludes to keep its upstream sockets off the VPN.
                     // app_process starts this helper as the separate shell UID.
                     val apk = instrumentation.context.packageCodePath
-                    val command = "CLASSPATH='$apk' app_process /system/bin " +
-                        "com.noichhar.app.DnsProbe ${Constants.VPN_DNS_ADDRESS} $domain 2>&1"
+                    // UiAutomation.executeShellCommand uses Runtime.exec directly
+                    // on older Android versions; it does not interpret shell syntax.
+                    val command = "/system/bin/env CLASSPATH=$apk /system/bin/app_process /system/bin " +
+                        "com.noichhar.app.DnsProbe ${Constants.VPN_DNS_ADDRESS} $domain"
                     val fd = instrumentation.uiAutomation.executeShellCommand(command)
                     val executor = Executors.newSingleThreadExecutor()
                     val output = try {
@@ -75,7 +77,6 @@ class VpnSmokeTest {
                         runCatching { fd.close() }
                         executor.shutdownNow()
                     }
-                    Log.e("NOICHAR_TEST_FAILURE", "DNS probe output: ${output.take(3000)}")
                     assertTrue("UDP probe failed: $output", output.contains("UDP_BLOCKED_OK"))
                     assertTrue("TCP probe failed: $output", output.contains("TCP_BLOCKED_OK"))
                 } finally {
