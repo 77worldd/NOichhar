@@ -101,6 +101,17 @@ class NetworkShield(
         domainsByIp = ips.associateWith { "Known ad or DNS-bypass server" }
     }
 
+    /**
+     * Route set from the last successful refresh, ready without any network I/O.
+     * Using it lets the tunnel come up immediately; [refreshIfStale] then warms the
+     * cache in the background for the next activation.
+     */
+    fun cachedRoutes(): Set<String> {
+        val ips = blockedIps()
+        rebuildDomainMap(ips)
+        return ips
+    }
+
     private fun readEssentialDomains(): List<String> {
         val domains = LinkedHashSet<String>()
         runCatching {

@@ -127,6 +127,7 @@
     <string name="source_exact">Exact user rule</string>
     <string name="source_wildcard">Wildcard user rule</string>
     <string name="vpn_permission_denied">VPN permission was not granted</string>
+    <string name="vpn_start_failed">Could not start protection. Please try again.</string>
     <string name="unknown_app">Unknown</string>
 
     <!-- Home and protection modes -->

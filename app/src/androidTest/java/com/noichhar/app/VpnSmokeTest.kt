@@ -44,7 +44,9 @@ class VpnSmokeTest {
         try {
             ActivityScenario.launch(MainActivity::class.java).use {
                 onView(withId(R.id.shield)).perform(click())
-                onView(withText(R.string.continue_label)).perform(click())
+                // Activation is one tap once consent exists, so the explanation dialog
+                // (and the system consent sheet) are optional steps here.
+                runCatching { onView(withText(R.string.continue_label)).perform(click()) }
                 if (VpnService.prepare(context) != null) {
                     val device = UiDevice.getInstance(instrumentation)
                     (device.wait(Until.findObject(By.res("android", "button1")), 5_000)
