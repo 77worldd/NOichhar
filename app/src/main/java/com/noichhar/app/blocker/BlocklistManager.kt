@@ -145,14 +145,11 @@ class BlocklistManager(
         if (blocked.isEmpty()) return@withContext 0
 
         val allowedKeys = allowed.mapNotNull { DomainValidator.normalize(it)?.domain }.toHashSet()
-        val finalEntries = LinkedHashMap<String, BlocklistEntry>(blocked.size + allowed.size + 256)
-
-        // User rules always win over downloaded rules.
-        dao.getUserEntriesSync().forEach { entry -> finalEntries[entry.domain] = entry }
+        val downloaded = LinkedHashMap<String, BlocklistEntry>(blocked.size + allowed.size + 256)
 
         allowed.forEach { rule ->
             val normalized = DomainValidator.normalize(rule) ?: return@forEach
-            finalEntries[normalized.domain] = allowEntry(
+            downloaded[normalized.domain] = allowEntry(
                 normalized.domain,
                 normalized.wildcard,
                 SOURCE_ALLOW
@@ -161,18 +158,24 @@ class BlocklistManager(
         blocked.forEach { rule ->
             val normalized = DomainValidator.normalize(rule) ?: return@forEach
             if (normalized.domain in allowedKeys) return@forEach
-            finalEntries.putIfAbsent(
+            downloaded.putIfAbsent(
                 normalized.domain,
                 blockEntry(normalized.domain, normalized.wildcard, SOURCE_REMOTE)
             )
         }
         builtIn.dohBypass.forEach { rule ->
             val normalized = DomainValidator.normalize(rule) ?: return@forEach
-            finalEntries.putIfAbsent(
+            downloaded.putIfAbsent(
                 normalized.domain,
                 blockEntry(normalized.domain, normalized.wildcard, SOURCE_DOH_BYPASS)
             )
         }
+
+        // User rules are applied last so they override downloaded exceptions,
+        // downloaded blocks and the built-in essential allowlist.
+        val finalEntries = LinkedHashMap<String, BlocklistEntry>(downloaded.size + 256)
+        finalEntries.putAll(downloaded)
+        dao.getUserEntriesSync().forEach { entry -> finalEntries[entry.domain] = entry }
 
         database.withTransaction {
             dao.deleteNonUserEntries()

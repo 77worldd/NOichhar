@@ -42,6 +42,7 @@ object Constants {
     const val PROXY_BUFFER_SIZE = 32 * 1024
 
     const val MAX_LOG_ENTRIES = 10000
+    const val LOG_PRUNE_INTERVAL = 50L
     const val DNS_CACHE_SIZE = 2000
     const val DNS_CACHE_TTL_SECONDS = 300L
     const val MIN_DNS_CACHE_TTL_SECONDS = 15L

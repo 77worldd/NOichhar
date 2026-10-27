@@ -116,13 +116,13 @@ class SettingsFragment : Fragment() {
             packageManager.getPackageInfo(
                 requireContext().packageName,
                 PackageManager.PackageInfoFlags.of(0)
-            ).versionName ?: "2.0.0"
+            ).versionName ?: "2.0.1"
         } else {
             @Suppress("DEPRECATION")
-            packageManager.getPackageInfo(requireContext().packageName, 0).versionName ?: "2.0.0"
+            packageManager.getPackageInfo(requireContext().packageName, 0).versionName ?: "2.0.1"
         }
     } catch (_: Exception) {
-        "2.0.0"
+        "2.0.1"
     }
 
     override fun onDestroyView() {

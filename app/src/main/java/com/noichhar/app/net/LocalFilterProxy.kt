@@ -172,11 +172,12 @@ class LocalFilterProxy(
             return null
         }
 
-        val defaultPort = if (uri?.scheme?.equals("https", ignoreCase = true) == true) {
-            Constants.HTTPS_PORT
-        } else {
-            Constants.HTTP_PORT
+        if (uri?.scheme?.equals("https", ignoreCase = true) == true) {
+            // HTTPS in absolute-form must use CONNECT; do not send cleartext to port 443.
+            writeForbidden(output, "Use CONNECT for HTTPS")
+            return null
         }
+        val defaultPort = Constants.HTTP_PORT
         val destination = parseAuthority(rawHost, defaultPort) ?: run {
             writeForbidden(output, "Invalid host")
             return null
@@ -294,19 +295,13 @@ class LocalFilterProxy(
 
     private fun readHead(input: InputStream): ProxyRequestHead? {
         val bytes = ByteArrayOutputStream()
-        var b1 = 0
-        var b2 = 0
-        var b3 = 0
-        var b4 = 0
+        var lastFour = 0
         while (bytes.size() < Constants.PROXY_HEADER_LIMIT) {
             val value = input.read()
             if (value < 0) return null
             bytes.write(value)
-            b1 = b2
-            b2 = b3
-            b3 = b4
-            b4 = value
-            if ((b1 == 13 && b2 == 10 && b3 == 13 && b4 == 10) || (b3 == 10 && b4 == 10)) break
+            lastFour = (lastFour shl 8) or (value and 0xFF)
+            if (lastFour == 0x0D0A0D0A || (lastFour and 0xFFFF) == 0x0A0A) break
         }
         if (bytes.size() >= Constants.PROXY_HEADER_LIMIT) return null
 

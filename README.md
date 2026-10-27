@@ -2,7 +2,7 @@
 
 NOichhar is a clean, local DNS and app-traffic filter for Android. It uses Android's `VpnService` to filter DNS requests locally and, in Maximum mode, adds hostname-aware filtering for compatible apps plus route-level protection against known ad-server IPs. It does **not** use a remote proxy, decrypt HTTPS, require root, require an account, or install a user CA certificate.
 
-Version **2.0.0** focuses on stronger in-app ad blocking, automatic fresh filter lists, a calmer Material 3 interface, and accessibility.
+Version **2.0.1** is a stability patch on top of the Maximum Protection upgrade: stronger in-app ad blocking, automatic fresh filter lists, a calmer Material 3 interface, and accessibility.
 
 ## Highlights
 
@@ -58,7 +58,7 @@ app/build/outputs/apk/debug/app-debug.apk
 app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
-The official GitHub Release APK is aligned, signed and verified by `.github/workflows/release.yml`. The signing key is generated once inside GitHub Actions cache and is never committed to the repository.
+Official release APKs are aligned, signed, checked against the v1 signing certificate, and published by `.github/workflows/ci.yml`. `.github/workflows/release.yml` provides the tag/manual release path. The signing key is generated once inside GitHub Actions cache and is never committed to the repository.
 
 ## First run
 
@@ -129,4 +129,4 @@ DNS filtering, hostname checks and logs happen on the device. NOichhar does not 
 ./gradlew testDebugUnitTest
 ```
 
-The CI workflow also validates all XML resources before building. The release workflow runs the same tests, builds a minified release APK, aligns and signs it with `apksigner`, verifies the signature and signing-key continuity, and publishes the APK with a SHA-256 checksum.
+The CI workflow also validates all XML resources before building. Both official release paths run the same tests, build a minified release APK, align and sign it with `apksigner`, verify the signature and signing-key continuity, and publish the APK with a SHA-256 checksum.

@@ -56,11 +56,7 @@ object PacketBuilder {
 
     fun tcpReset(original: IPPacket): ByteArray {
         val segment = original.tcpSegment()
-        val acknowledgement = if (segment != null) {
-            (segment.sequenceNumber + segment.payload.size.toLong()) and 0xFFFFFFFFL
-        } else {
-            0L
-        }
+        val acknowledgement = segment?.nextSequenceNumber() ?: 0L
         return buildTcpResponse(
             original = original,
             sequenceNumber = 0L,

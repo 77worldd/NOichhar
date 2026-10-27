@@ -97,15 +97,32 @@ jobs:
             --ks-key-alias noichhar \
             --ks-pass file:signing/password.txt \
             --min-sdk-version 24 \
-            --out NOichhar-v2.0.0.apk \
+            --out NOichhar-v2.0.1.apk \
             "$RUNNER_TEMP/noichhar-aligned.apk"
-          "$BUILD_TOOLS/apksigner" verify --verbose --min-sdk-version 24 NOichhar-v2.0.0.apk
-          sha256sum NOichhar-v2.0.0.apk > NOichhar-v2.0.0.apk.sha256
+          "$BUILD_TOOLS/apksigner" verify --verbose --min-sdk-version 24 NOichhar-v2.0.1.apk
+          sha256sum NOichhar-v2.0.1.apk > NOichhar-v2.0.1.apk.sha256
+
+      - name: Verify signing-key continuity
+        if: github.ref == 'refs/heads/arena/409b8f69-noichhar' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+          gh release download v1.0.0 --repo "$GITHUB_REPOSITORY" \
+            --pattern 'NOichhar-v1.0.0.apk' --dir "$RUNNER_TEMP" --clobber
+          "$APKSIGNER" verify --print-certs "$RUNNER_TEMP/NOichhar-v1.0.0.apk" \
+            | grep 'SHA-256 digest' | head -n 1 > "$RUNNER_TEMP/old-cert.txt"
+          "$APKSIGNER" verify --print-certs NOichhar-v2.0.1.apk \
+            | grep 'SHA-256 digest' | head -n 1 > "$RUNNER_TEMP/new-cert.txt"
+          diff -u "$RUNNER_TEMP/old-cert.txt" "$RUNNER_TEMP/new-cert.txt"
+          echo "Release signing certificate matches v1.0.0"
 
       - name: Prepare official release notes
         run: |
           cp RELEASE_NOTES.md RELEASE_NOTES_GENERATED.md
-          printf '\n---\n\nSHA-256: `%s`\n' "$(cut -d' ' -f1 < NOichhar-v2.0.0.apk.sha256)" >> RELEASE_NOTES_GENERATED.md
+          printf '\n---\n\nSHA-256: `%s`\n' "$(cut -d' ' -f1 < NOichhar-v2.0.1.apk.sha256)" >> RELEASE_NOTES_GENERATED.md
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -124,23 +141,23 @@ jobs:
       - name: Upload signed release APK
         uses: actions/upload-artifact@v4
         with:
-          name: NOichhar-v2.0.0-release
+          name: NOichhar-v2.0.1-release
           path: |
-            NOichhar-v2.0.0.apk
-            NOichhar-v2.0.0.apk.sha256
+            NOichhar-v2.0.1.apk
+            NOichhar-v2.0.1.apk.sha256
           if-no-files-found: error
 
       - name: Publish official GitHub release
-        if: github.ref == 'refs/heads/arena/2ca3ea00-noichhar' && github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/arena/409b8f69-noichhar' && github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.0
+          tag_name: v2.0.1
           target_commitish: ${{ github.sha }}
-          name: NOichhar v2.0.0
+          name: NOichhar v2.0.1
           body_path: RELEASE_NOTES_GENERATED.md
           files: |
-            NOichhar-v2.0.0.apk
-            NOichhar-v2.0.0.apk.sha256
+            NOichhar-v2.0.1.apk
+            NOichhar-v2.0.1.apk.sha256
           draft: false
           prerelease: false
           make_latest: true

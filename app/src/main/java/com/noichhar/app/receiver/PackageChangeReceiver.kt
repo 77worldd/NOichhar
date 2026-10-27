@@ -7,6 +7,7 @@ import com.noichhar.app.NOichharApp
 import com.noichhar.app.service.FirewallManager
 import com.noichhar.app.service.NOichharVpnService
 import com.noichhar.app.util.Logger
+import com.noichhar.app.util.PackageUtils
 import kotlinx.coroutines.launch
 
 class PackageChangeReceiver : BroadcastReceiver() {
@@ -26,6 +27,7 @@ class PackageChangeReceiver : BroadcastReceiver() {
         val appContext = context.applicationContext
         NOichharApp.instance.applicationScope.launch {
             try {
+                PackageUtils.clearAppInfoCache()
                 FirewallManager(appContext).refreshAppList()
                 NOichharVpnService.instance?.getDnsCache()?.clear()
             } catch (e: Exception) {
