@@ -47,4 +47,15 @@ class DomainBlockerTest {
         assertTrue(blocker.isBlocked("pixel.tracker.test"))
         assertFalse(blocker.isBlocked("safe.ads.example.com"))
     }
+
+    @Test
+    fun userBlockRuleOverridesAllowlist() {
+        val blocker = DomainBlocker()
+        blocker.loadRules(listOf(BlockRule("allowed.example.com", allow = true)))
+        assertFalse(blocker.isBlocked("allowed.example.com"))
+
+        blocker.addDomain("allowed.example.com")
+
+        assertTrue(blocker.isBlocked("allowed.example.com"))
+    }
 }

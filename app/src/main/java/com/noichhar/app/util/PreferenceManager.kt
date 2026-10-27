@@ -102,7 +102,7 @@ class PreferenceManager(context: Context) {
         DnsProvider.GOOGLE -> Constants.DNS_GOOGLE
         DnsProvider.QUAD9 -> Constants.DNS_QUAD9
         DnsProvider.ADGUARD -> Constants.DNS_ADGUARD
-        DnsProvider.CUSTOM -> customDnsUrl.takeIf { it.startsWith("https://", true) || it.startsWith("http://", true) }.orEmpty()
+        DnsProvider.CUSTOM -> customDnsUrl.takeIf { it.startsWith("https://", true) }.orEmpty()
         DnsProvider.SYSTEM -> ""
     }
 

@@ -60,4 +60,11 @@ data class TcpSegment(
     }
 
     fun hasFlag(flag: Int): Boolean = (flags and flag) == flag
+
+    /** Number of sequence positions consumed by this segment, including SYN/FIN. */
+    fun sequenceLength(): Long = payload.size.toLong() +
+        (if (hasFlag(FLAG_SYN)) 1L else 0L) +
+        (if (hasFlag(FLAG_FIN)) 1L else 0L)
+
+    fun nextSequenceNumber(): Long = (sequenceNumber + sequenceLength()) and 0xFFFFFFFFL
 }

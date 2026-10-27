@@ -129,7 +129,7 @@ class PacketInterceptor(
 
     private fun handleTcpSyn(packet: IPPacket, segment: TcpSegment, outputStream: FileOutputStream) {
         val initialSequence = Random.nextLong(1L, 0xFFFFFFFFL)
-        val acknowledgement = (segment.sequenceNumber + 1L) and 0xFFFFFFFFL
+        val acknowledgement = segment.nextSequenceNumber()
         tcpSessions[sessionKey(packet)] = TcpDnsSession(
             nextSequence = (initialSequence + 1L) and 0xFFFFFFFFL,
             createdAt = System.currentTimeMillis()
@@ -223,8 +223,7 @@ class PacketInterceptor(
             val session = tcpSessions.remove(sessionKey(packet))
             val sequence = session?.nextSequence
                 ?: (segment.acknowledgementNumber and 0xFFFFFFFFL)
-            var acknowledgement = (segment.sequenceNumber + segment.payload.size.toLong()) and 0xFFFFFFFFL
-            if (segment.hasFlag(TcpSegment.FLAG_FIN)) acknowledgement = (acknowledgement + 1L) and 0xFFFFFFFFL
+            val acknowledgement = segment.nextSequenceNumber()
             PacketBuilder.tcpDnsResponse(
                 original = packet,
                 dnsResponse = dnsResponse,

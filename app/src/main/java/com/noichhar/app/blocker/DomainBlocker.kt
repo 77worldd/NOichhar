@@ -62,6 +62,9 @@ class DomainBlocker {
     fun addDomain(domain: String) {
         val rule = DomainValidator.normalize(domain) ?: return
         if (rule.wildcard) wildcardSuffixes += rule.domain else exactRules += rule.domain
+        // A newly added user block rule must win over any list-based allow rule.
+        exactAllowRules.remove(rule.domain)
+        wildcardAllowSuffixes.remove(rule.domain)
         updateCount()
     }
 

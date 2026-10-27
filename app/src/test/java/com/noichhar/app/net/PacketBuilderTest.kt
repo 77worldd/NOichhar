@@ -47,8 +47,16 @@ class PacketBuilderTest {
             TcpSegment.FLAG_RST or TcpSegment.FLAG_ACK,
             reset[33].toInt() and 0xFF
         )
+        assertEquals(1012L, readInt(reset, 28))
         assertEquals(0xFFFF, foldedChecksum(reset, 0, 20))
         assertEquals(0xFFFF, foldedChecksum(reset, 20, 20, pseudoHeaderSum(reset, 20)))
+    }
+
+    @Test
+    fun tcpResetAcknowledgesSyn() {
+        val original = tcpPacket(flags = TcpSegment.FLAG_SYN, payloadSize = 0)
+        val reset = PacketBuilder.tcpReset(original)
+        assertEquals(1001L, readInt(reset, 28))
     }
 
     private fun udpPacket(): IPPacket {
@@ -62,19 +70,22 @@ class PacketBuilderTest {
         return ipPacket(IPPacket.PROTOCOL_UDP, payload)
     }
 
-    private fun tcpPacket(): IPPacket {
-        val payload = ByteArray(20 + 12)
+    private fun tcpPacket(
+        flags: Int = TcpSegment.FLAG_PSH or TcpSegment.FLAG_ACK,
+        payloadSize: Int = 12
+    ): IPPacket {
+        val payload = ByteArray(20 + payloadSize)
         ByteBuffer.wrap(payload).apply {
             putShort(12_345)
             putShort(53)
             putInt(1_000)
             putInt(2_000)
             put(0x50)
-            put((TcpSegment.FLAG_PSH or TcpSegment.FLAG_ACK).toByte())
+            put(flags.toByte())
             putShort(0xFFFF.toShort())
             putShort(0)
             putShort(0)
-            put(ByteArray(12) { 0x11 })
+            put(ByteArray(payloadSize) { 0x11 })
         }
         return ipPacket(IPPacket.PROTOCOL_TCP, payload)
     }
@@ -90,6 +101,12 @@ class PacketBuilderTest {
         totalLength = 20 + transport.size,
         payload = transport
     )
+
+    private fun readInt(data: ByteArray, offset: Int): Long =
+        ((data[offset].toLong() and 0xFFL) shl 24) or
+            ((data[offset + 1].toLong() and 0xFFL) shl 16) or
+            ((data[offset + 2].toLong() and 0xFFL) shl 8) or
+            (data[offset + 3].toLong() and 0xFFL)
 
     private fun pseudoHeaderSum(packet: ByteArray, transportLength: Int): Long {
         var sum = 0L

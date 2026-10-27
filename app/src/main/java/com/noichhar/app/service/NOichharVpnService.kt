@@ -254,7 +254,7 @@ class NOichharVpnService : VpnService() {
         if (event.isBlocked) blockedCount++ else allowedCount++
         totalCount++
 
-        if (totalCount % 50 == 0L) refreshNotification()
+        if (totalCount % Constants.LOG_PRUNE_INTERVAL == 0L) refreshNotification()
 
         if (!NOichharApp.instance.preferenceManager.enableLogs) return
 
@@ -289,7 +289,7 @@ class NOichharVpnService : VpnService() {
                 isBlocked = event.isBlocked
             )
 
-            if (database.dnsLogDao().getCount() > Constants.MAX_LOG_ENTRIES) {
+            if (totalCount % Constants.LOG_PRUNE_INTERVAL == 0L) {
                 val cutoff = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
                 database.dnsLogDao().deleteOlderThan(cutoff)
             }

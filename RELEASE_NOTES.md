@@ -1,8 +1,18 @@
-# NOichhar v2.0.0 — Maximum Protection
+# NOichhar v2.0.1 — Maximum Protection
 
-This release is a major upgrade focused on blocking more ads inside Android apps while keeping the app light, clean and stable.
+This patch keeps every v2 protection layer while fixing rule precedence, TCP resets and hot-path performance issues found during a post-release audit.
 
-## What is new
+## What is fixed in 2.0.1
+
+- User block rules now always override downloaded exceptions and the built-in essential allowlist.
+- A user block added for an allowlisted domain takes effect immediately.
+- Route-shield TCP resets now acknowledge SYN correctly, so blocked connections fail fast instead of waiting for a timeout.
+- App names and package names are cached, and log pruning is periodic, reducing per-query work on the DNS hot path.
+- Custom DNS-over-HTTPS endpoints must use `https://`; cleartext endpoints are rejected.
+- Malformed absolute-form HTTPS proxy requests are rejected instead of being sent as cleartext to port 443.
+- CI now verifies that the new APK uses the same signing certificate as official v2.0.0 before publishing.
+
+## What is included from v2
 
 ### Stronger in-app ad blocking
 
@@ -11,7 +21,7 @@ This release is a major upgrade focused on blocking more ads inside Android apps
 - HTTPS `CONNECT` hostname and plain HTTP `Host` checks against the same blocklist, allowlist and per-app rules.
 - DNS over TCP on port 53 is now answered locally with correctly framed TCP DNS responses.
 - CNAME/alias inspection prevents blocked upstream aliases from bypassing a filter through an allowed name.
-- Curated network shield resolves high-value ad/tracker hosts and blocks safe, non-shared IPv4 routes.
+- Curated network shield resolves high-value ad/tracker hosts and blocks safe, allowlist-checked IPv4 routes.
 - Optional blocking of well-known hard-coded encrypted-DNS resolver hostnames.
 
 ### Better filter lists
@@ -20,7 +30,7 @@ This release is a major upgrade focused on blocking more ads inside Android apps
 - Automatic 12-hour updates from HaGeZi Multi PRO mini, StevenBlack Unified hosts and AdAway hosts.
 - Robust hosts, compressed-hosts, plain-domain and Adblock Plus parsing, including exception rules.
 - Essential first-party allowlist and user-defined allow rules for fixing false positives.
-- User block and allow rules always override downloaded rules.
+- User block and allow rules always override downloaded and built-in rules.
 - Chunked, bounded database writes and a suffix-set matcher to keep lookups fast.
 
 ### Performance and reliability
@@ -39,17 +49,17 @@ This release is a major upgrade focused on blocking more ads inside Android apps
 - New Protection settings for maximum mode, DNS-bypass blocking, automatic updates and manual refresh.
 - Allowlist screen with subdomain support.
 - Larger touch targets, labelled controls, readable contrast, scalable text and smooth layout transitions.
-- Version 2.0.0 with adaptive launcher icons and signed release verification.
+- Version 2.0.1 with adaptive launcher icons and signed release verification.
 
 ## Installation
 
-1. Download the signed `NOichhar-v2.0.0.apk` asset.
+1. Download the signed `NOichhar-v2.0.1.apk` asset.
 2. Install it on Android 7.0 (API 24) or newer.
 3. Open NOichhar and accept the Android VPN connection prompt.
 4. Turn off Android **Private DNS** in system network settings if it is set to automatic/strict mode.
 5. Choose **Maximum** protection and tap **START**.
 
-The release workflow checks that the signing certificate matches the official v1.0.0 release. If Android still reports a signature conflict on a modified system ROM, uninstall the old build and install this APK again.
+CI checks that the signing certificate matches the official v2.0.0 release before publishing. Users upgrading from v1.0.0 should uninstall it first because v2 uses a different signing certificate.
 
 ## Important platform notes
 

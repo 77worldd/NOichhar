@@ -6,10 +6,12 @@ import com.noichhar.app.util.Constants
 import com.noichhar.app.util.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicLong
 
 class ConnectionTracker {
 
     private val database = NOichharApp.instance.database
+    private val insertCount = AtomicLong()
 
     suspend fun logConnection(
         appUid: Int,
@@ -31,7 +33,9 @@ class ConnectionTracker {
                     timestamp = System.currentTimeMillis()
                 )
             )
-            trimOldLogs()
+            if (insertCount.incrementAndGet() % Constants.LOG_PRUNE_INTERVAL == 0L) {
+                trimOldLogs()
+            }
         }.onFailure { Logger.e("Failed to log connection", it) }
     }
 

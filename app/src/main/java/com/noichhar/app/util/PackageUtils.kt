@@ -6,8 +6,12 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Build
 import com.noichhar.app.database.entity.AppInfo
+import java.util.concurrent.ConcurrentHashMap
 
 object PackageUtils {
+
+    private val appNameCache = ConcurrentHashMap<Int, String>()
+    private val packageNameCache = ConcurrentHashMap<Int, String>()
 
     fun getInstalledApps(context: Context): List<AppInfo> {
         val pm = context.packageManager
@@ -50,19 +54,29 @@ object PackageUtils {
     }
 
     fun getAppName(context: Context, uid: Int): String {
+        appNameCache[uid]?.let { return it }
         val pm = context.packageManager
         val packages = pm.getPackagesForUid(uid)
         if (packages.isNullOrEmpty()) return "Unknown (UID: $uid)"
-        return try {
+        val name = try {
             val appInfo = pm.getApplicationInfo(packages[0], 0)
             pm.getApplicationLabel(appInfo).toString()
         } catch (e: Exception) {
             packages[0]
         }
+        appNameCache[uid] = name
+        return name
     }
 
     fun getPackageNameForUid(context: Context, uid: Int): String? {
-        val packages = context.packageManager.getPackagesForUid(uid)
-        return packages?.firstOrNull()
+        packageNameCache[uid]?.let { return it }
+        val packageName = context.packageManager.getPackagesForUid(uid)?.firstOrNull()
+        if (packageName != null) packageNameCache[uid] = packageName
+        return packageName
+    }
+
+    fun clearAppInfoCache() {
+        appNameCache.clear()
+        packageNameCache.clear()
     }
 }
