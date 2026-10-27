@@ -10,7 +10,7 @@ This patch keeps every v2 protection layer while fixing rule precedence, TCP res
 - App names and package names are cached, and log pruning is periodic, reducing per-query work on the DNS hot path.
 - Custom DNS-over-HTTPS endpoints must use `https://`; cleartext endpoints are rejected.
 - Malformed absolute-form HTTPS proxy requests are rejected instead of being sent as cleartext to port 443.
-- CI now verifies that the new APK uses the same signing certificate as official v1.0.0 before publishing.
+- CI now verifies that the new APK uses the same signing certificate as official v2.0.0 before publishing.
 
 ## What is included from v2
 
@@ -59,7 +59,7 @@ This patch keeps every v2 protection layer while fixing rule precedence, TCP res
 4. Turn off Android **Private DNS** in system network settings if it is set to automatic/strict mode.
 5. Choose **Maximum** protection and tap **START**.
 
-CI checks that the signing certificate matches the official v1.0.0 release before publishing. If Android still reports a signature conflict on a modified system ROM, uninstall the old build and install this APK again.
+CI checks that the signing certificate matches the official v2.0.0 release before publishing. Users upgrading from v1.0.0 should uninstall it first because v2 uses a different signing certificate.
 
 ## Important platform notes
 

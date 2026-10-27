@@ -58,7 +58,7 @@ app/build/outputs/apk/debug/app-debug.apk
 app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
-Official release APKs are aligned, signed, checked against the v1 signing certificate, and published by `.github/workflows/ci.yml`. `.github/workflows/release.yml` provides the tag/manual release path. The signing key is generated once inside GitHub Actions cache and is never committed to the repository.
+Official release APKs are aligned, signed, checked against the v2.0.0 signing certificate, and published by `.github/workflows/ci.yml`. `.github/workflows/release.yml` provides the tag/manual release path. The signing key is generated once inside GitHub Actions cache and is never committed to the repository.
 
 ## First run
 

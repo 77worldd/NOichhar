@@ -110,14 +110,14 @@ jobs:
           set -euo pipefail
           BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           APKSIGNER="$BUILD_TOOLS/apksigner"
-          gh release download v1.0.0 --repo "$GITHUB_REPOSITORY" \
-            --pattern 'NOichhar-v1.0.0.apk' --dir "$RUNNER_TEMP" --clobber
-          "$APKSIGNER" verify --print-certs "$RUNNER_TEMP/NOichhar-v1.0.0.apk" \
+          gh release download v2.0.0 --repo "$GITHUB_REPOSITORY" \
+            --pattern 'NOichhar-v2.0.0.apk' --dir "$RUNNER_TEMP" --clobber
+          "$APKSIGNER" verify --print-certs "$RUNNER_TEMP/NOichhar-v2.0.0.apk" \
             | grep 'SHA-256 digest' | head -n 1 > "$RUNNER_TEMP/old-cert.txt"
           "$APKSIGNER" verify --print-certs NOichhar-v2.0.1.apk \
             | grep 'SHA-256 digest' | head -n 1 > "$RUNNER_TEMP/new-cert.txt"
           diff -u "$RUNNER_TEMP/old-cert.txt" "$RUNNER_TEMP/new-cert.txt"
-          echo "Release signing certificate matches v1.0.0"
+          echo "Release signing certificate matches v2.0.0"
 
       - name: Prepare official release notes
         run: |
