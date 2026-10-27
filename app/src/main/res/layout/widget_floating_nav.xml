@@ -1,3 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The five accessible tab items are populated by FloatingBottomNav. -->
-<merge xmlns:android="http://schemas.android.com/apk/res/android" />
+<merge xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools" tools:viewBindingIgnore="true"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <LinearLayout android:id="@+id/nav_home" android:layout_width="0dp"
+        android:layout_height="match_parent" android:layout_weight="1"
+        android:gravity="center" android:orientation="vertical" android:clickable="true"
+        android:focusable="true">
+        <ImageView android:id="@+id/nav_icon" android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_nav_home" android:importantForAccessibility="no" />
+        <TextView android:id="@+id/nav_label" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center" android:maxLines="1" android:text="Home" android:textSize="10sp"
+            app:fontFamily="@font/inter_medium" android:importantForAccessibility="no" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/nav_stats" android:layout_width="0dp"
+        android:layout_height="match_parent" android:layout_weight="1"
+        android:gravity="center" android:orientation="vertical" android:clickable="true"
+        android:focusable="true">
+        <ImageView android:id="@+id/nav_icon" android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_nav_stats" android:importantForAccessibility="no" />
+        <TextView android:id="@+id/nav_label" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center" android:maxLines="1" android:text="Stats" android:textSize="10sp"
+            app:fontFamily="@font/inter_medium" android:importantForAccessibility="no" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/nav_rpn" android:layout_width="0dp"
+        android:layout_height="match_parent" android:layout_weight="1"
+        android:gravity="center" android:orientation="vertical" android:clickable="true"
+        android:focusable="true">
+        <ImageView android:id="@+id/nav_icon" android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_nav_rpn" android:importantForAccessibility="no" />
+        <TextView android:id="@+id/nav_label" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center" android:maxLines="1" android:text="RPN" android:textSize="10sp"
+            app:fontFamily="@font/inter_medium" android:importantForAccessibility="no" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/nav_configure" android:layout_width="0dp"
+        android:layout_height="match_parent" android:layout_weight="1"
+        android:gravity="center" android:orientation="vertical" android:clickable="true"
+        android:focusable="true">
+        <ImageView android:id="@+id/nav_icon" android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_nav_configure" android:importantForAccessibility="no" />
+        <TextView android:id="@+id/nav_label" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center" android:maxLines="1" android:text="Configure" android:textSize="10sp"
+            app:fontFamily="@font/inter_medium" android:importantForAccessibility="no" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/nav_about" android:layout_width="0dp"
+        android:layout_height="match_parent" android:layout_weight="1"
+        android:gravity="center" android:orientation="vertical" android:clickable="true"
+        android:focusable="true">
+        <ImageView android:id="@+id/nav_icon" android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_nav_about" android:importantForAccessibility="no" />
+        <TextView android:id="@+id/nav_label" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center" android:maxLines="1" android:text="About" android:textSize="10sp"
+            app:fontFamily="@font/inter_medium" android:importantForAccessibility="no" />
+    </LinearLayout>
+</merge>

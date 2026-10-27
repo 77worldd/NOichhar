@@ -33,7 +33,7 @@ The local release output is `app/build/outputs/apk/release/app-release-unsigned.
 ## What the statistics mean
 
 - The live upload/download rate is **device-wide** `TrafficStats`, not VPN-only bandwidth.
-- App bandwidth comes from Android `NetworkStatsManager` when Usage Access is granted. It is sampled while protection is active and stored on the device for up to seven days. Android can report coarse or delayed buckets; mobile data may be unavailable due to platform/device permissions. On Android 7, Wi-Fi/mobile transport is used as an estimate of metered status. Shared UIDs are reported together.
+- App bandwidth comes from Android `NetworkStatsManager` when Usage Access is granted. It is sampled while protection is active and retained on the device for seven days; background cleanup is subject to Android scheduling and may be delayed if the app is force-stopped. Android can report coarse or delayed buckets; mobile data may be unavailable due to platform/device permissions. On Android 7, Wi-Fi/mobile transport is used as an estimate of metered status. Shared UIDs are reported together.
 - Request counts come from actual DNS, supported HTTP proxy and shield events. They are **filtered requests**, not live socket or active-connection counts. The heatmap uses 120 twelve-minute buckets from those events.
 - Detailed request logging can be disabled in Configure; aggregate counts without domains or IP addresses are still kept for the statistics and heatmap. Detailed logs and aggregates stay on-device.
 
@@ -51,4 +51,4 @@ Automatic updates are configured for [HaGeZi](https://github.com/hagezi/dns-bloc
 
 ## Verification
 
-CI validates XML, runs JVM tests including 500,000-domain and atomic-reload coverage, and performs clean debug and release builds. Android instrumentation tests cover database migration and the five-tab navigation on an emulator when available. No test can establish universal filtering across all Android devices or traffic that bypasses the operating system's VPN DNS/proxy configuration.
+CI validates XML, runs JVM tests including 500,000-domain and atomic-reload coverage, and performs clean debug and release builds. Android instrumentation tests on API 24 and 29 cover database migration, aggregate queries, mode/settings persistence, five-tab navigation and real local VPN start/stop. No test can establish universal filtering across all Android devices or traffic that bypasses the operating system's VPN DNS/proxy configuration.

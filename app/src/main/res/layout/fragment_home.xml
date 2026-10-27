@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="@dimen/screen_edge"
+        android:paddingStart="@dimen/screen_edge" android:paddingEnd="@dimen/screen_edge"
         android:paddingTop="48dp">
 
         <!-- Status row -->
@@ -37,7 +37,7 @@
                 android:textColor="@color/text_tertiary"
                 android:textSize="12sp"
                 android:letterSpacing="0.18"
-                android:fontFamily="@font/inter_bold" />
+                app:fontFamily="@font/inter_bold" />
 
             <TextView
                 android:id="@+id/tv_timestamp"
@@ -46,7 +46,7 @@
                 android:text="--"
                 android:textColor="@color/text_tertiary"
                 android:textSize="12sp"
-                android:fontFamily="@font/inter_medium" />
+                app:fontFamily="@font/inter_medium" />
         </LinearLayout>
 
         <!-- Hero shield -->
@@ -70,7 +70,7 @@
             android:textColor="@color/text_white"
             android:textSize="34sp"
             android:letterSpacing="-0.02"
-            android:fontFamily="@font/inter_bold" />
+            app:fontFamily="@font/inter_bold" />
 
         <TextView
             android:id="@+id/tv_hero_subtitle"
@@ -80,7 +80,7 @@
             android:text="Tap to activate protection"
             android:textColor="@color/text_secondary"
             android:textSize="15sp"
-            android:fontFamily="@font/inter_regular"
+            app:fontFamily="@font/inter_regular"
             android:layout_marginTop="6dp"
             android:layout_marginBottom="24dp" />
 
@@ -113,7 +113,7 @@
                             android:textColor="@color/text_tertiary"
                             android:textSize="10sp"
                             android:letterSpacing="0.18"
-                            android:fontFamily="@font/inter_semibold" />
+                            app:fontFamily="@font/inter_semibold" />
 
                         <LinearLayout
                             android:layout_width="wrap_content"
@@ -134,7 +134,7 @@
                                 android:text="—"
                                 android:textColor="@color/accent_cyan"
                                 android:textSize="18sp"
-                                android:fontFamily="@font/inter_bold"
+                                app:fontFamily="@font/inter_bold"
                                 android:layout_marginStart="4dp" />
 
                             <ImageView
@@ -150,7 +150,7 @@
                                 android:text="—"
                                 android:textColor="@color/accent_mint"
                                 android:textSize="18sp"
-                                android:fontFamily="@font/inter_bold"
+                                app:fontFamily="@font/inter_bold"
                                 android:layout_marginStart="4dp" />
                         </LinearLayout>
                     </LinearLayout>
@@ -190,7 +190,7 @@
                         android:text="0"
                         android:textColor="@color/text_white"
                         android:textSize="40sp"
-                        android:fontFamily="@font/inter_bold"
+                        app:fontFamily="@font/inter_bold"
                         android:letterSpacing="-0.03" />
 
                     <TextView
@@ -200,7 +200,7 @@
                         android:textColor="@color/accent_mint"
                         android:textSize="11sp"
                         android:letterSpacing="0.2"
-                        android:fontFamily="@font/inter_semibold" />
+                        app:fontFamily="@font/inter_semibold" />
                 </LinearLayout>
             </com.noichhar.app.ui.widget.GlassCardView>
 
@@ -223,7 +223,7 @@
                         android:text="0"
                         android:textColor="@color/text_white"
                         android:textSize="40sp"
-                        android:fontFamily="@font/inter_bold"
+                        app:fontFamily="@font/inter_bold"
                         android:letterSpacing="-0.03" />
 
                     <TextView
@@ -233,7 +233,7 @@
                         android:textColor="@color/accent_coral"
                         android:textSize="11sp"
                         android:letterSpacing="0.2"
-                        android:fontFamily="@font/inter_semibold" />
+                        app:fontFamily="@font/inter_semibold" />
                 </LinearLayout>
             </com.noichhar.app.ui.widget.GlassCardView>
         </LinearLayout>
@@ -257,7 +257,7 @@
                     android:textColor="@color/text_tertiary"
                     android:textSize="10sp"
                     android:letterSpacing="0.18"
-                    android:fontFamily="@font/inter_semibold" />
+                    app:fontFamily="@font/inter_semibold" />
 
                 <com.noichhar.app.ui.widget.ActivityHeatmapView
                     android:id="@+id/heatmap"
@@ -277,7 +277,7 @@
             android:textColor="@color/text_white"
             android:textSize="15sp"
             android:letterSpacing="0.15"
-            android:fontFamily="@font/inter_bold"
+            app:fontFamily="@font/inter_bold"
             android:background="@drawable/bg_action_primary"
             android:layout_marginTop="20dp"
             android:clickable="true"

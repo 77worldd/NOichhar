@@ -17,6 +17,7 @@ import com.noichhar.app.blocker.BlocklistUpdateWorker
 import com.noichhar.app.database.NOichharDatabase
 import com.noichhar.app.service.FirewallManager
 import com.noichhar.app.stats.TrafficTracker
+import com.noichhar.app.stats.StatsPruneWorker
 import com.noichhar.app.util.Constants
 import com.noichhar.app.util.Logger
 import com.noichhar.app.util.PreferenceManager
@@ -52,6 +53,7 @@ class NOichharApp : Application() {
         trafficTracker = TrafficTracker(this)
         createNotificationChannel()
         scheduleBlocklistUpdates()
+        scheduleStatsPruning()
 
         applicationScope.launch {
             runCatching {
@@ -95,6 +97,13 @@ class NOichharApp : Application() {
                 immediate
             )
         }
+    }
+
+    private fun scheduleStatsPruning() {
+        val work = PeriodicWorkRequestBuilder<StatsPruneWorker>(24, TimeUnit.HOURS).build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "noichhar-stats-retention", ExistingPeriodicWorkPolicy.KEEP, work
+        )
     }
 
     private fun createNotificationChannel() {

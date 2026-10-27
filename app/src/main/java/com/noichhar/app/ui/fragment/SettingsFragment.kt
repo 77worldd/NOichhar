@@ -10,7 +10,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.noichhar.app.NOichharApp
@@ -57,9 +56,6 @@ class SettingsFragment : Fragment() {
         binding.switchLogs.setOnCheckedChangeListener { _, isChecked ->
             prefManager.enableLogs = isChecked
         }
-
-        // Obsidian is intentionally dark-first; do not expose a nonfunctional theme switch.
-        binding.switchDarkMode.visibility = View.GONE
 
         binding.switchAdvancedProtection.isChecked = prefManager.advancedProtection
         binding.switchAdvancedProtection.setOnCheckedChangeListener { _, isChecked ->

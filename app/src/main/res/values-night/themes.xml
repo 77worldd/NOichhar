@@ -42,6 +42,7 @@
         <item name="materialButtonStyle">@style/Widget.NOichhar.Button</item>
         <item name="materialSwitchStyle">@style/Widget.NOichhar.Switch</item>
         <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
         <item name="android:lineSpacingExtra">2dp</item>
     </style>
 

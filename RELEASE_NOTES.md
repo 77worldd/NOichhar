@@ -17,6 +17,6 @@ Install the signed `NOichhar-v2.1.0.apk` over a compatible v2 release, open the 
 
 ## Important limitations
 
-Only traffic sent to the VPN DNS address and selected shield routes enters the TUN interface. App rules cover DNS and compatible system-proxy requests, not every direct connection. Hard-coded or encrypted DNS, some custom networking stacks, QUIC and IPv6 can bypass filtering. Throughput and bandwidth figures are device-wide Android estimates, not a count of active VPN connections. Detailed logs can be disabled; anonymous, per-UID aggregate statistics remain on-device for up to seven days.
+Only traffic sent to the VPN DNS address and selected shield routes enters the TUN interface. App rules cover DNS and compatible system-proxy requests, not every direct connection. Hard-coded or encrypted DNS, some custom networking stacks, QUIC and IPv6 can bypass filtering. Throughput and bandwidth figures are device-wide Android estimates, not a count of active VPN connections. Detailed logs can be disabled; anonymous, per-UID aggregate statistics have a seven-day on-device retention policy; Android scheduling or a force-stop can delay cleanup.
 
 The release workflow verifies signing-certificate continuity with v2.0.0 and publishes a SHA-256 checksum. Users upgrading from the differently signed v1.0.0 must uninstall that version first.

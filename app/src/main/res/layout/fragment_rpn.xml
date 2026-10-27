@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:paddingBottom="100dp">
@@ -9,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="@dimen/screen_edge"
+        android:paddingStart="@dimen/screen_edge" android:paddingEnd="@dimen/screen_edge"
         android:paddingTop="48dp">
 
         <TextView
@@ -19,7 +20,7 @@
             android:textColor="@color/text_tertiary"
             android:textSize="12sp"
             android:letterSpacing="0.2"
-            android:fontFamily="@font/inter_semibold" />
+            app:fontFamily="@font/inter_semibold" />
 
         <TextView
             android:layout_width="match_parent"
@@ -27,7 +28,7 @@
             android:text="Firewall Rules"
             android:textColor="@color/text_white"
             android:textSize="28sp"
-            android:fontFamily="@font/inter_bold"
+            app:fontFamily="@font/inter_bold"
             android:layout_marginTop="4dp"
             android:layout_marginBottom="20dp" />
 
@@ -47,7 +48,7 @@
                     android:text="Blocklist Status"
                     android:textColor="@color/text_white"
                     android:textSize="16sp"
-                    android:fontFamily="@font/inter_semibold" />
+                    app:fontFamily="@font/inter_semibold" />
 
                 <TextView
                     android:id="@+id/tv_blocklist_count"
@@ -56,7 +57,7 @@
                     android:text="Loading rules…"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp"
-                    android:fontFamily="@font/inter_regular"
+                    app:fontFamily="@font/inter_regular"
                     android:layout_marginTop="4dp" />
 
                 <TextView
@@ -66,7 +67,7 @@
                     android:gravity="center"
                     android:text="Update Blocklists Now"
                     android:textColor="@color/text_white"
-                    android:fontFamily="@font/inter_semibold"
+                    app:fontFamily="@font/inter_semibold"
                     android:background="@drawable/bg_action_primary"
                     android:layout_marginTop="16dp"
                     android:clickable="true"
@@ -79,7 +80,7 @@
                     android:gravity="center"
                     android:text="Add Custom Rule"
                     android:textColor="@color/accent_mint"
-                    android:fontFamily="@font/inter_semibold"
+                    app:fontFamily="@font/inter_semibold"
                     android:background="@drawable/bg_action_outline"
                     android:layout_marginTop="10dp"
                     android:clickable="true"
@@ -104,7 +105,7 @@
                     android:text="Operation Mode"
                     android:textColor="@color/text_white"
                     android:textSize="16sp"
-                    android:fontFamily="@font/inter_semibold" />
+                    app:fontFamily="@font/inter_semibold" />
 
                 <RadioGroup
                     android:id="@+id/rg_mode"
@@ -118,7 +119,7 @@
                         android:layout_height="54dp"
                         android:text="DNS filtering only"
                         android:textColor="@color/text_primary"
-                        android:fontFamily="@font/inter_medium" />
+                        app:fontFamily="@font/inter_medium" />
 
                     <RadioButton
                         android:id="@+id/rb_firewall"
@@ -126,7 +127,7 @@
                         android:layout_height="54dp"
                         android:text="App rules only"
                         android:textColor="@color/text_primary"
-                        android:fontFamily="@font/inter_medium" />
+                        app:fontFamily="@font/inter_medium" />
 
                     <RadioButton
                         android:id="@+id/rb_both"
@@ -134,7 +135,7 @@
                         android:layout_height="54dp"
                         android:text="DNS + app rules (default)"
                         android:textColor="@color/text_primary"
-                        android:fontFamily="@font/inter_medium"
+                        app:fontFamily="@font/inter_medium"
                         android:checked="true" />
                 </RadioGroup>
             </LinearLayout>

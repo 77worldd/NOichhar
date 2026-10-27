@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:paddingBottom="100dp">
@@ -9,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="@dimen/screen_edge"
+        android:paddingStart="@dimen/screen_edge" android:paddingEnd="@dimen/screen_edge"
         android:paddingTop="48dp">
 
         <TextView
@@ -19,7 +20,7 @@
             android:textColor="@color/text_tertiary"
             android:textSize="12sp"
             android:letterSpacing="0.2"
-            android:fontFamily="@font/inter_semibold" />
+            app:fontFamily="@font/inter_semibold" />
 
         <TextView
             android:layout_width="match_parent"
@@ -27,7 +28,7 @@
             android:text="Configure"
             android:textColor="@color/text_white"
             android:textSize="28sp"
-            android:fontFamily="@font/inter_bold"
+            app:fontFamily="@font/inter_bold"
             android:layout_marginTop="4dp"
             android:layout_marginBottom="20dp" />
 
@@ -52,7 +53,7 @@
                         android:layout_weight="1"
                         android:text="Start on boot"
                         android:textColor="@color/text_primary"
-                        android:fontFamily="@font/inter_medium"
+                        app:fontFamily="@font/inter_medium"
                         android:textSize="15sp" />
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/sw_boot"
@@ -76,7 +77,7 @@
                         android:layout_weight="1"
                         android:text="Enable DNS logging"
                         android:textColor="@color/text_primary"
-                        android:fontFamily="@font/inter_medium"
+                        app:fontFamily="@font/inter_medium"
                         android:textSize="15sp" />
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/sw_logs"
@@ -101,7 +102,7 @@
                         android:layout_weight="1"
                         android:text="Block unknown DNS / proxy requests"
                         android:textColor="@color/text_primary"
-                        android:fontFamily="@font/inter_medium"
+                        app:fontFamily="@font/inter_medium"
                         android:textSize="15sp" />
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/sw_unknown"
@@ -132,7 +133,7 @@
                     android:text="DNS Provider"
                     android:textColor="@color/text_white"
                     android:textSize="16sp"
-                    android:fontFamily="@font/inter_semibold"
+                    app:fontFamily="@font/inter_semibold"
                     android:layout_marginBottom="8dp" />
 
                 <RadioGroup
@@ -150,7 +151,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:textColor="@color/text_primary"
-                        android:fontFamily="@font/inter_medium"
+                        app:fontFamily="@font/inter_medium"
                         android:checked="true" />
                     <RadioButton
                         android:id="@+id/rb_g"
@@ -158,21 +159,21 @@
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:textColor="@color/text_primary"
-                        android:fontFamily="@font/inter_medium" />
+                        app:fontFamily="@font/inter_medium" />
                     <RadioButton
                         android:id="@+id/rb_q"
                         android:text="Quad9 9.9.9.9"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:textColor="@color/text_primary"
-                        android:fontFamily="@font/inter_medium" />
+                        app:fontFamily="@font/inter_medium" />
                     <RadioButton
                         android:id="@+id/rb_ag"
                         android:text="AdGuard DNS"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:textColor="@color/text_primary"
-                        android:fontFamily="@font/inter_medium" />
+                        app:fontFamily="@font/inter_medium" />
                 </RadioGroup>
             </LinearLayout>
         </com.noichhar.app.ui.widget.GlassCardView>

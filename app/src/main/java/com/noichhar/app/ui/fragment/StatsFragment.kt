@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.noichhar.app.NOichharApp
 import com.noichhar.app.R
 import com.noichhar.app.databinding.FragmentStatsBinding
+import com.noichhar.app.database.dao.TrafficTotals
 import com.noichhar.app.service.NOichharVpnService
 import com.noichhar.app.stats.TimeWindow
 import com.noichhar.app.ui.adapter.MostAllowedAdapter
@@ -59,11 +60,7 @@ class StatsFragment : Fragment() {
                 Toast.makeText(requireContext(), "Start protection to clear its DNS cache", Toast.LENGTH_SHORT).show()
             else { cache.clear(); Toast.makeText(requireContext(), "DNS cache cleared", Toast.LENGTH_SHORT).show() }
         }
-        vm.totals.observe(viewLifecycleOwner) { totals ->
-            b.tvUnmetered.text = if (access) FormatUtils.formatBytes(totals.unmetered) else "—"
-            b.tvMetered.text = if (access) FormatUtils.formatBytes(totals.metered) else "—"
-            b.tvOverall.text = if (access) FormatUtils.formatBytes(totals.overall) else "—"
-        }
+        vm.totals.observe(viewLifecycleOwner) { totals -> renderTotals(totals) }
         vm.topConnections.observe(viewLifecycleOwner) { list ->
             topAdapter.submitList(list)
             b.tvNoRequests.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
@@ -98,13 +95,27 @@ class StatsFragment : Fragment() {
             !access -> "Grant Usage Access for device-wide app bandwidth. Request counts work without it."
             !NOichharVpnService.isActive -> "Device-wide usage is sampled while protection is active. Android may report usage with a delay."
             !coverage.wifiAvailable && !coverage.mobileAvailable -> "Waiting for Android network-usage data. Samples may be delayed."
-            !coverage.mobileAvailable -> "Device-wide usage; mobile data is unavailable on this device. Android may delay samples."
+            !coverage.mobileAvailable -> "* Totals are partial: mobile data is unavailable. Android may delay samples."
+            !coverage.wifiAvailable -> "* Totals are partial: Wi-Fi data is unavailable. Android may delay samples."
             else -> "Device-wide usage sampled while protection is active. Android may delay samples; older devices estimate metering by transport."
         }
-        if (!access) {
-            b.tvUnmetered.text = "—"; b.tvMetered.text = "—"; b.tvOverall.text = "—"
-            trafficAdapter.submitList(emptyList())
+        renderTotals(vm.totals.value)
+        if (!access) trafficAdapter.submitList(emptyList())
+    }
+    private fun renderTotals(totals: TrafficTotals?) {
+        if (_binding == null) return
+        val coverage = NOichharApp.instance.trafficTracker.coverage.value
+        val partial = NOichharVpnService.isActive && coverage.usageAccess &&
+            (coverage.wifiAvailable != coverage.mobileAvailable)
+        val unavailable = NOichharVpnService.isActive && coverage.usageAccess &&
+            !coverage.wifiAvailable && !coverage.mobileAvailable
+        fun display(value: Long): String {
+            if (!access || (unavailable && value == 0L)) return "—"
+            return FormatUtils.formatBytes(value) + if (partial) "*" else ""
         }
+        b.tvUnmetered.text = totals?.let { display(it.unmetered) } ?: "—"
+        b.tvMetered.text = totals?.let { display(it.metered) } ?: "—"
+        b.tvOverall.text = totals?.let { display(it.overall) } ?: "—"
     }
     private fun openUsageAccess() {
         runCatching { startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
