@@ -94,14 +94,10 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: |
-            if ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest > /tmp/noichhar-emulator.log 2>&1; then
-              status=0
-            else
-              status=$?
-            fi
-            cat /tmp/noichhar-emulator.log
-            adb logcat -d -s NOICHAR_TEST_FAILURE:E AndroidRuntime:E TestRunner:E > /tmp/noichhar-device-log.txt || true
+          script: >-
+            if ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest > /tmp/noichhar-emulator.log 2>&1; then status=0; else status=$?; fi;
+            cat /tmp/noichhar-emulator.log;
+            adb logcat -d -s NOICHAR_TEST_FAILURE:E AndroidRuntime:E TestRunner:E > /tmp/noichhar-device-log.txt || true;
             exit "$status"
       - name: Annotate instrumentation failures
         if: failure()
