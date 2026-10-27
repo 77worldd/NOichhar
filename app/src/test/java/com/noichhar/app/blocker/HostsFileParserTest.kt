@@ -1,6 +1,7 @@
 package com.noichhar.app.blocker
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -22,5 +23,27 @@ class HostsFileParserTest {
         assertTrue(domains.contains("plain.example.net"))
         assertTrue(domains.contains("*.wild.example.com"))
         assertEquals(4, domains.size)
+    }
+
+    @Test
+    fun parsesAdblockRulesCompressedHostsAndExceptions() {
+        val content = """
+            [Adblock Plus]
+            ! metadata
+            ||ads.example.com^
+            ||tracker.example.net^${'$'}third-party
+            @@||safe.example.com^
+            ##.ad-banner
+            0.0.0.0 ad-one.test ad-two.test
+            *.wildcard.test
+        """.trimIndent()
+        val rules = HostsFileParser().parseRules(content)
+        assertTrue(rules.blocked.contains("ads.example.com"))
+        assertTrue(rules.blocked.contains("tracker.example.net"))
+        assertTrue(rules.blocked.contains("ad-one.test"))
+        assertTrue(rules.blocked.contains("ad-two.test"))
+        assertTrue(rules.blocked.contains("*.wildcard.test"))
+        assertTrue(rules.allowed.contains("safe.example.com"))
+        assertFalse(rules.blocked.any { it.contains("#") || it.contains("$") })
     }
 }

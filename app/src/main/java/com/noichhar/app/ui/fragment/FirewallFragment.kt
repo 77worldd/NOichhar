@@ -4,7 +4,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -23,6 +25,7 @@ class FirewallFragment : Fragment() {
     private val viewModel: FirewallViewModel by viewModels()
     private lateinit var connectionAdapter: ConnectionAdapter
     private lateinit var blocklistAdapter: BlocklistAdapter
+    private lateinit var allowlistAdapter: BlocklistAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -57,13 +60,22 @@ class FirewallFragment : Fragment() {
         }
 
         binding.btnUpdateBlocklist.setOnClickListener { viewModel.updateBlocklists() }
-        binding.btnAddCustomDomain.setOnClickListener { showAddDomainDialog() }
+        binding.btnAddCustomDomain.setOnClickListener { showAddBlockDomainDialog() }
+        binding.btnAddAllowDomain.setOnClickListener { showAddAllowDomainDialog() }
     }
 
     private fun setupRecyclerViews() {
-        blocklistAdapter = BlocklistAdapter { entry -> viewModel.removeCustomBlockDomain(entry) }
+        blocklistAdapter = BlocklistAdapter(allowMode = false) { entry ->
+            viewModel.removeCustomBlockDomain(entry)
+        }
         binding.rvUserRules.layoutManager = LinearLayoutManager(requireContext())
         binding.rvUserRules.adapter = blocklistAdapter
+
+        allowlistAdapter = BlocklistAdapter(allowMode = true) { entry ->
+            viewModel.removeCustomAllowDomain(entry)
+        }
+        binding.rvAllowRules.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvAllowRules.adapter = allowlistAdapter
 
         connectionAdapter = ConnectionAdapter()
         binding.rvConnections.layoutManager = LinearLayoutManager(requireContext())
@@ -81,6 +93,12 @@ class FirewallFragment : Fragment() {
             binding.tvNoCustomRules.visibility = if (rules.isEmpty()) View.VISIBLE else View.GONE
         }
 
+        viewModel.userAllowlist.observe(viewLifecycleOwner) { rules ->
+            allowlistAdapter.submitList(rules)
+            binding.rvAllowRules.visibility = if (rules.isEmpty()) View.GONE else View.VISIBLE
+            binding.tvNoAllowRules.visibility = if (rules.isEmpty()) View.VISIBLE else View.GONE
+        }
+
         viewModel.connections.observe(viewLifecycleOwner) { connections ->
             connectionAdapter.submitList(connections)
             binding.rvConnections.visibility = if (connections.isEmpty()) View.GONE else View.VISIBLE
@@ -96,7 +114,7 @@ class FirewallFragment : Fragment() {
         }
     }
 
-    private fun showAddDomainDialog() {
+    private fun showAddBlockDomainDialog() {
         val editText = EditText(requireContext()).apply {
             hint = getString(R.string.domain_rule_hint)
             setPadding(48, 32, 48, 32)
@@ -109,6 +127,36 @@ class FirewallFragment : Fragment() {
             .setPositiveButton(R.string.save) { _, _ ->
                 val domain = editText.text.toString().trim()
                 if (domain.isNotEmpty()) viewModel.addCustomBlockDomain(domain)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showAddAllowDomainDialog() {
+        val container = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 24, 48, 24)
+        }
+        val editText = EditText(requireContext()).apply {
+            hint = getString(R.string.domain_rule_hint)
+            maxLines = 1
+        }
+        val checkBox = CheckBox(requireContext()).apply {
+            text = getString(R.string.include_subdomains)
+            isChecked = true
+        }
+        container.addView(editText)
+        container.addView(checkBox)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.add_allow_rule)
+            .setMessage(R.string.allowlist_dialog_message)
+            .setView(container)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val domain = editText.text.toString().trim()
+                if (domain.isNotEmpty()) {
+                    viewModel.addCustomAllowDomain(domain, checkBox.isChecked)
+                }
             }
             .setNegativeButton(R.string.cancel, null)
             .show()

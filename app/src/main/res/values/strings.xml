@@ -22,7 +22,7 @@
     <string name="tap_to_activate">Tap to activate NOichhar shield</string>
     <string name="tap_to_deactivate">Tap to deactivate</string>
     <string name="vpn_permission_title">Allow VPN connection</string>
-    <string name="vpn_permission_message">NOichhar needs VPN permission to filter DNS requests locally on your device. It does not send your browsing data to a company server.</string>
+    <string name="vpn_permission_message">NOichhar needs VPN permission to filter DNS and compatible app traffic locally on your device. It does not decrypt your browsing or send it to a company server.</string>
 
     <string name="total_blocked">Blocked</string>
     <string name="total_allowed">Allowed</string>
@@ -32,7 +32,7 @@
     <string name="protocol">Protocol</string>
     <string name="dns_over_https">DNS over HTTPS</string>
     <string name="dns_over_tls">DNS over TLS</string>
-    <string name="plain_dns">Plain DNS (UDP)</string>
+    <string name="plain_dns">Plain DNS (UDP/TCP)</string>
     <string name="custom_dns">Custom DNS</string>
     <string name="system_dns">System DNS</string>
     <string name="custom_endpoint_hint">Endpoint</string>
@@ -71,7 +71,7 @@
     <string name="notification_channel_name">NOichhar VPN Service</string>
     <string name="notification_channel_desc">Shows when NOichhar protection is active</string>
     <string name="notification_title">NOichhar is active</string>
-    <string name="notification_text">Blocking ads and trackers</string>
+    <string name="notification_text">Blocking ads, trackers and DNS bypasses</string>
     <string name="notification_blocked_count">Blocked %1$d requests</string>
 
     <string name="start_on_boot">Start on boot</string>
@@ -119,7 +119,7 @@
 
     <string name="app_count">%1$d apps managed</string>
     <string name="version_info">Version %1$s</string>
-    <string name="privacy_summary">Local DNS filtering and ad blocking. No account, no tracking, no remote proxy.</string>
+    <string name="privacy_summary">Local DNS and compatible app-traffic filtering. No account, no tracking, no remote proxy and no HTTPS decryption.</string>
     <string name="custom_dns_configuration">Custom DNS Configuration</string>
     <string name="dns_url_or_ip">DNS URL or IP</string>
     <string name="display_name">Display Name</string>
@@ -128,4 +128,45 @@
     <string name="source_wildcard">Wildcard user rule</string>
     <string name="vpn_permission_denied">VPN permission was not granted</string>
     <string name="unknown_app">Unknown</string>
+
+    <!-- Home and protection modes -->
+    <string name="home_subtitle">Clean, private protection for your whole phone</string>
+    <string name="protection_paused">Paused</string>
+    <string name="protection_active_short">Protected</string>
+    <string name="protection_mode">Protection mode</string>
+    <string name="balanced_mode">Balanced</string>
+    <string name="maximum_mode">Maximum</string>
+    <string name="maximum_protection_summary">Maximum mode layers updated domain lists, DNS-over-TCP filtering, hostname-aware app filtering and IP shielding for more in-app ads.</string>
+    <string name="balanced_protection_summary">Balanced mode uses lightweight local DNS filtering only. Choose it for the lowest overhead and maximum compatibility.</string>
+    <string name="protection_layers">DNS filtering • TCP DNS • app hostname filtering • IP shield</string>
+    <string name="protection_layers_full">Four layers active: DNS, TCP DNS, hostname-aware app filtering and route-level IP shield.</string>
+    <string name="protection_layers_basic">Three layers active: DNS, TCP DNS and IP shield. Hostname-aware app filtering needs Android 10 or newer.</string>
+    <string name="update_filters">Update filters now</string>
+    <string name="status_information">Status</string>
+
+    <!-- Settings -->
+    <string name="protection_settings">Protection</string>
+    <string name="general_settings">General</string>
+    <string name="advanced_protection">Maximum protection</string>
+    <string name="advanced_protection_summary">Adds hostname-aware app filtering and route-level IP blocking without decrypting HTTPS.</string>
+    <string name="block_doh_bypass">Block encrypted-DNS bypass</string>
+    <string name="block_doh_bypass_summary">Encourages compatible apps to use NOichhar instead of their own hard-coded DNS resolver.</string>
+    <string name="refresh_protection">Refresh protection now</string>
+    <string name="auto_update_blocklists">Automatic filter updates</string>
+    <string name="accessibility">Accessibility</string>
+    <string name="accessibility_summary">Large touch targets, labelled controls, readable contrast and support for Android font scaling.</string>
+    <string name="protection_refreshed">Protection refreshed</string>
+    <string name="start_protection_first">Start protection first</string>
+
+    <!-- Allowlist -->
+    <string name="allowlist">Allowed domains</string>
+    <string name="allowlist_summary">Use this when a trusted app or website is affected by an over-broad public filter list.</string>
+    <string name="add_allow_rule">Add Allowed Domain</string>
+    <string name="allowlist_dialog_message">Allowed domains override downloaded blocklists. Include subdomains for services that use many hostnames.</string>
+    <string name="include_subdomains">Include all subdomains</string>
+    <string name="no_allow_rules">No custom allowed domains</string>
+    <string name="allow_rule_added">Allowed: %1$s</string>
+    <string name="allow_rule_removed">Allow rule removed: %1$s</string>
+    <string name="source_allow_exact">Exact allow rule</string>
+    <string name="source_allow_wildcard">Subdomain allow rule</string>
 </resources>

@@ -21,9 +21,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.nio.ByteBuffer
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.random.Random
 
 data class DnsQueryEvent(
     val domain: String,
@@ -43,17 +46,24 @@ class PacketInterceptor(
     private val dnsCache: DnsCache,
     private val preferenceManager: PreferenceManager,
     private val firewallManager: FirewallManager,
+    private val blockedIps: Set<String>,
+    private val networkShield: NetworkShield,
     private val onDnsQuery: (DnsQueryEvent) -> Unit
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val dnsSemaphore = Semaphore(48)
     private val dnsResolver = DnsResolver()
     private val dohResolver = DohResolver()
     private val dotResolver = DotResolver()
     private val uidResolver = UidResolver(context)
     private val outputLock = Any()
+    private val tcpSessions = ConcurrentHashMap<String, TcpDnsSession>()
+    private val lastBlockedIpLog = ConcurrentHashMap<String, Long>()
 
     @Volatile
     private var running = false
+
+    private var packetCounter = 0L
 
     fun start() {
         running = true
@@ -77,11 +87,37 @@ class PacketInterceptor(
                     delay(1)
                     continue
                 }
+                packetCounter++
+                if (packetCounter % 512L == 0L) pruneTcpSessions()
+
                 val packetData = buffer.copyOf(length)
                 val packet = IPPacket.parse(packetData) ?: continue
-                if (!packet.isDnsQuery()) continue
+                val destination = packet.destAddress.hostAddress
 
-                scope.launch { handleDnsPacket(packet, outputStream) }
+                if (packet.isDnsTarget() && packet.isDnsQuery()) {
+                    val segment = packet.tcpSegment()
+                    if (packet.isTcpDnsQuery() && segment != null) {
+                        if (segment.hasFlag(TcpSegment.FLAG_SYN)) {
+                            handleTcpSyn(packet, segment, outputStream)
+                            continue
+                        }
+                        if (segment.hasFlag(TcpSegment.FLAG_RST) || segment.hasFlag(TcpSegment.FLAG_FIN)) {
+                            tcpSessions.remove(sessionKey(packet))
+                            continue
+                        }
+                    }
+                    val dnsPayload = packet.getDnsPayload() ?: continue
+                    val tcpSegment = if (packet.isTcpDnsQuery()) segment else null
+                    scope.launch {
+                        dnsSemaphore.withPermit {
+                            handleDnsPacket(packet, tcpSegment, dnsPayload, outputStream)
+                        }
+                    }
+                } else if (destination != null && destination in blockedIps) {
+                    handleBlockedIp(packet, destination, outputStream)
+                }
+                // Any other packet is intentionally ignored. Normal traffic is not
+                // routed into the TUN interface, so it never reaches this loop.
             } catch (e: Exception) {
                 if (running) {
                     Logger.e("Packet processing error: ${e.message}")
@@ -91,19 +127,41 @@ class PacketInterceptor(
         }
     }
 
-    private suspend fun handleDnsPacket(packet: IPPacket, outputStream: FileOutputStream) {
-        val dnsPayload = packet.getDnsPayload() ?: return
+    private fun handleTcpSyn(packet: IPPacket, segment: TcpSegment, outputStream: FileOutputStream) {
+        val initialSequence = Random.nextLong(1L, 0xFFFFFFFFL)
+        val acknowledgement = (segment.sequenceNumber + 1L) and 0xFFFFFFFFL
+        tcpSessions[sessionKey(packet)] = TcpDnsSession(
+            nextSequence = (initialSequence + 1L) and 0xFFFFFFFFL,
+            createdAt = System.currentTimeMillis()
+        )
+        val response = PacketBuilder.tcpSynAck(packet, initialSequence, acknowledgement)
+        synchronized(outputLock) {
+            outputStream.write(response)
+            outputStream.flush()
+        }
+    }
+
+    private suspend fun handleDnsPacket(
+        packet: IPPacket,
+        tcpSegment: TcpSegment?,
+        dnsPayload: ByteArray,
+        outputStream: FileOutputStream
+    ) {
         val question = DnsPacketParser.parseQuestion(dnsPayload) ?: return
         val domain = question.name
         val queryType = DnsPacketParser.getQueryTypeName(question.type)
         val startTime = System.currentTimeMillis()
-        val uid = uidResolver.resolveUdpUid(packet)
+        val uid = if (packet.isTcpDnsQuery()) {
+            uidResolver.resolveTcpUid(packet)
+        } else {
+            uidResolver.resolveUdpUid(packet)
+        }
         val appName = if (uid >= 0) PackageUtils.getAppName(context, uid) else "Unknown"
         val firewallDecision = firewallManager.evaluateDns(uid, NetworkUtils.isScreenOn(context))
 
         var blocked = !firewallDecision.allowed
         var blockReason = firewallDecision.reason
-        val response: ByteArray = if (blocked) {
+        var response: ByteArray = if (blocked) {
             DnsPacketParser.createNxDomainResponse(dnsPayload)
         } else if (domainBlocker.isBlocked(domain)) {
             blocked = true
@@ -114,19 +172,31 @@ class PacketInterceptor(
             if (cached != null) {
                 DnsPacketParser.rewriteTransactionId(cached, dnsPayload)
             } else {
-                resolveDns(dnsPayload)?.let { upstream ->
-                    dnsCache.put(domain, question.type, upstream)
-                    DnsPacketParser.rewriteTransactionId(upstream, dnsPayload)
-                } ?: DnsPacketParser.createServFailResponse(dnsPayload)
+                val upstream = resolveDns(dnsPayload)
+                if (upstream == null) {
+                    DnsPacketParser.createServFailResponse(dnsPayload)
+                } else {
+                    val blockedAlias = DnsPacketParser.parseAnswerNames(upstream)
+                        .firstOrNull { alias -> alias != domain.lowercase() && domainBlocker.isBlocked(alias) }
+                    if (blockedAlias != null) {
+                        blocked = true
+                        blockReason = "Blocked upstream alias: $blockedAlias"
+                        DnsPacketParser.createNxDomainResponse(dnsPayload)
+                    } else {
+                        dnsCache.put(domain, question.type, upstream)
+                        DnsPacketParser.rewriteTransactionId(upstream, dnsPayload)
+                    }
+                }
             }
         }
 
         if (response.isEmpty()) return
-        var finalResponse = response
-        if (20 + 8 + finalResponse.size > Constants.VPN_MTU) {
-            finalResponse = DnsPacketParser.createServFailResponse(dnsPayload)
+        val overhead = if (packet.isTcpDnsQuery()) 20 + 20 + 2 else 20 + 8
+        if (overhead + response.size > Constants.VPN_MTU) {
+            response = DnsPacketParser.createServFailResponse(dnsPayload)
         }
-        writeDnsResponse(packet, finalResponse, outputStream)
+
+        writeDnsResponse(packet, tcpSegment, response, outputStream)
 
         onDnsQuery(
             DnsQueryEvent(
@@ -137,9 +207,38 @@ class PacketInterceptor(
                 responseTimeMs = System.currentTimeMillis() - startTime,
                 appUid = uid,
                 appName = appName,
-                responseIp = if (blocked) null else DnsPacketParser.parseFirstAnswerIp(finalResponse)
+                responseIp = if (blocked) null else DnsPacketParser.parseFirstAnswerIp(response)
             )
         )
+    }
+
+    private fun writeDnsResponse(
+        packet: IPPacket,
+        tcpSegment: TcpSegment?,
+        dnsResponse: ByteArray,
+        outputStream: FileOutputStream
+    ) {
+        val responsePacket = if (packet.isTcpDnsQuery()) {
+            val segment = tcpSegment ?: return
+            val session = tcpSessions.remove(sessionKey(packet))
+            val sequence = session?.nextSequence
+                ?: (segment.acknowledgementNumber and 0xFFFFFFFFL)
+            var acknowledgement = (segment.sequenceNumber + segment.payload.size.toLong()) and 0xFFFFFFFFL
+            if (segment.hasFlag(TcpSegment.FLAG_FIN)) acknowledgement = (acknowledgement + 1L) and 0xFFFFFFFFL
+            PacketBuilder.tcpDnsResponse(
+                original = packet,
+                dnsResponse = dnsResponse,
+                sequenceNumber = sequence,
+                acknowledgementNumber = acknowledgement
+            )
+        } else {
+            PacketBuilder.udpDnsResponse(packet, dnsResponse)
+        }
+
+        synchronized(outputLock) {
+            outputStream.write(responsePacket)
+            outputStream.flush()
+        }
     }
 
     private fun resolveDns(query: ByteArray): ByteArray? = when (preferenceManager.dnsProtocol) {
@@ -163,58 +262,54 @@ class PacketInterceptor(
         return dnsResolver.resolveUdpAny(query, servers)
     }
 
-    private fun writeDnsResponse(
-        originalPacket: IPPacket,
-        dnsResponse: ByteArray,
-        outputStream: FileOutputStream
-    ) {
-        val responsePacket = buildUdpResponsePacket(originalPacket, dnsResponse)
-        synchronized(outputLock) {
-            outputStream.write(responsePacket)
-            outputStream.flush()
+    private fun handleBlockedIp(packet: IPPacket, destination: String, outputStream: FileOutputStream) {
+        if (packet.protocol == IPPacket.PROTOCOL_TCP) {
+            val reset = PacketBuilder.tcpReset(packet)
+            synchronized(outputLock) {
+                outputStream.write(reset)
+                outputStream.flush()
+            }
+        }
+
+        val now = System.currentTimeMillis()
+        val last = lastBlockedIpLog[destination] ?: 0L
+        if (now - last < 5_000L) return
+        lastBlockedIpLog[destination] = now
+
+        scope.launch {
+            val uid = if (packet.protocol == IPPacket.PROTOCOL_TCP) {
+                uidResolver.resolveTcpUid(packet)
+            } else {
+                uidResolver.resolveUdpUid(packet)
+            }
+            val appName = if (uid >= 0) PackageUtils.getAppName(context, uid) else "Unknown"
+            onDnsQuery(
+                DnsQueryEvent(
+                    domain = networkShield.domainFor(destination) ?: "Known ad server",
+                    queryType = "IP",
+                    isBlocked = true,
+                    blockReason = "Network shield: $destination",
+                    responseTimeMs = 0,
+                    appUid = uid,
+                    appName = appName,
+                    responseIp = destination
+                )
+            )
         }
     }
 
-    private fun buildUdpResponsePacket(originalPacket: IPPacket, dnsResponse: ByteArray): ByteArray {
-        val udpLength = 8 + dnsResponse.size
-        val ipLength = 20 + udpLength
-        val buffer = ByteBuffer.allocate(ipLength)
+    private fun sessionKey(packet: IPPacket): String =
+        "${packet.sourceAddress.hostAddress}:${packet.sourcePort}->" +
+            "${packet.destAddress.hostAddress}:${packet.destPort}"
 
-        buffer.put(0x45.toByte())
-        buffer.put(0)
-        buffer.putShort(ipLength.toShort())
-        buffer.putShort(0)
-        buffer.putShort(0x4000.toShort())
-        buffer.put(64)
-        buffer.put(17)
-        buffer.putShort(0)
-
-        buffer.put(originalPacket.destAddress.address)
-        buffer.put(originalPacket.sourceAddress.address)
-
-        buffer.putShort(originalPacket.destPort.toShort())
-        buffer.putShort(originalPacket.sourcePort.toShort())
-        buffer.putShort(udpLength.toShort())
-        buffer.putShort(0)
-        buffer.put(dnsResponse)
-
-        val result = buffer.array()
-        calculateIpChecksum(result)
-        return result
+    private fun pruneTcpSessions() {
+        val cutoff = System.currentTimeMillis() - 30_000L
+        tcpSessions.entries.removeIf { it.value.createdAt < cutoff }
+        if (lastBlockedIpLog.size > 2_000) lastBlockedIpLog.clear()
     }
 
-    private fun calculateIpChecksum(packet: ByteArray) {
-        packet[10] = 0
-        packet[11] = 0
-        var sum = 0L
-        for (i in 0 until 20 step 2) {
-            sum += ((packet[i].toInt() and 0xFF) shl 8) or (packet[i + 1].toInt() and 0xFF)
-        }
-        while (sum shr 16 > 0) {
-            sum = (sum and 0xFFFF) + (sum shr 16)
-        }
-        val checksum = sum.toInt().inv() and 0xFFFF
-        packet[10] = (checksum shr 8).toByte()
-        packet[11] = (checksum and 0xFF).toByte()
-    }
+    private data class TcpDnsSession(
+        val nextSequence: Long,
+        val createdAt: Long
+    )
 }

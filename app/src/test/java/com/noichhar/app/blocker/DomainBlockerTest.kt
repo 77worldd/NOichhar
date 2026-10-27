@@ -32,4 +32,19 @@ class DomainBlockerTest {
         blocker.addWhitelist("safe.ads.example.com")
         assertFalse(blocker.isBlocked("safe.ads.example.com"))
     }
+
+    @Test
+    fun explicitAllowRulesOverrideDownloadedRules() {
+        val blocker = DomainBlocker()
+        blocker.loadRules(
+            listOf(
+                BlockRule("ads.example.com"),
+                BlockRule("*.tracker.test", wildcard = true),
+                BlockRule("safe.ads.example.com", allow = true)
+            )
+        )
+        assertTrue(blocker.isBlocked("ads.example.com"))
+        assertTrue(blocker.isBlocked("pixel.tracker.test"))
+        assertFalse(blocker.isBlocked("safe.ads.example.com"))
+    }
 }

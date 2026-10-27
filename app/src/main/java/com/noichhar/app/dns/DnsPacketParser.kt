@@ -114,6 +114,92 @@ object DnsPacketParser {
         return null
     }
 
+    fun getMinAnswerTtlSeconds(packet: ByteArray): Long? {
+        val header = parseHeader(packet) ?: return null
+        if (header.anCount == 0) return null
+        var offset = 12
+        repeat(header.qdCount) {
+            val (_, end) = readDomainName(packet, offset) ?: return null
+            offset = end + 4
+            if (offset > packet.size) return null
+        }
+        var minimum: Long? = null
+        repeat(header.anCount) {
+            val (_, nameEnd) = readDomainName(packet, offset) ?: return null
+            if (nameEnd + 10 > packet.size) return null
+            val dataLength = readShort(packet, nameEnd + 8)
+            val dataStart = nameEnd + 10
+            if (dataStart + dataLength > packet.size) return null
+            val ttl = readInt(packet, nameEnd + 4)
+            if (ttl > 0 && (minimum == null || ttl < minimum!!)) minimum = ttl
+            offset = dataStart + dataLength
+        }
+        return minimum
+    }
+
+    fun parseAnswerNames(packet: ByteArray): List<String> {
+        val header = parseHeader(packet) ?: return emptyList()
+        if (header.anCount == 0) return emptyList()
+        val names = LinkedHashSet<String>()
+        var offset = 12
+        repeat(header.qdCount) {
+            val (_, end) = readDomainName(packet, offset) ?: return emptyList()
+            offset = end + 4
+            if (offset > packet.size) return emptyList()
+        }
+        repeat(header.anCount) {
+            val (owner, nameEnd) = readDomainName(packet, offset) ?: return names.toList()
+            if (owner.isNotBlank()) names += owner.trim('.').lowercase()
+            if (nameEnd + 10 > packet.size) return names.toList()
+            val type = readShort(packet, nameEnd)
+            val dataLength = readShort(packet, nameEnd + 8)
+            val dataStart = nameEnd + 10
+            if (dataStart + dataLength > packet.size) return names.toList()
+            if ((type == TYPE_CNAME || type == TYPE_NS) && dataLength > 0) {
+                val (target, _) = readDomainName(packet, dataStart) ?: return@repeat
+                if (target.isNotBlank()) names += target.trim('.').lowercase()
+            }
+            offset = dataStart + dataLength
+        }
+        return names.toList()
+    }
+
+    fun parseAnswerIps(packet: ByteArray): List<String> {
+        val header = parseHeader(packet) ?: return emptyList()
+        if (header.anCount == 0) return emptyList()
+        val ips = LinkedHashSet<String>()
+        var offset = 12
+        repeat(header.qdCount) {
+            val (_, end) = readDomainName(packet, offset) ?: return emptyList()
+            offset = end + 4
+            if (offset > packet.size) return emptyList()
+        }
+        repeat(header.anCount) {
+            val (_, nameEnd) = readDomainName(packet, offset) ?: return ips.toList()
+            if (nameEnd + 10 > packet.size) return ips.toList()
+            val type = readShort(packet, nameEnd)
+            val dataLength = readShort(packet, nameEnd + 8)
+            val dataStart = nameEnd + 10
+            if (dataStart + dataLength > packet.size) return ips.toList()
+            when {
+                type == TYPE_A && dataLength == 4 -> {
+                    ips += (0 until 4).joinToString(".") {
+                        (packet[dataStart + it].toInt() and 0xFF).toString()
+                    }
+                }
+                type == TYPE_AAAA && dataLength == 16 -> {
+                    ips += (0 until 16 step 2).joinToString(":") {
+                        val high = packet[dataStart + it].toInt() and 0xFF
+                        val low = packet[dataStart + it + 1].toInt() and 0xFF
+                        ((high shl 8) or low).toString(16)
+                    }
+                }
+            }
+            offset = dataStart + dataLength
+        }
+        return ips.toList()
+    }
+
     private fun createEmptyResponse(query: ByteArray, flags: Int): ByteArray {
         val question = parseQuestion(query) ?: return ByteArray(0)
         val output = ByteArrayOutputStream(question.endOffset)
@@ -166,4 +252,10 @@ object DnsPacketParser {
 
     private fun readShort(packet: ByteArray, offset: Int): Int =
         ((packet[offset].toInt() and 0xFF) shl 8) or (packet[offset + 1].toInt() and 0xFF)
+
+    private fun readInt(packet: ByteArray, offset: Int): Long =
+        ((packet[offset].toLong() and 0xFFL) shl 24) or
+            ((packet[offset + 1].toLong() and 0xFFL) shl 16) or
+            ((packet[offset + 2].toLong() and 0xFFL) shl 8) or
+            (packet[offset + 3].toLong() and 0xFFL)
 }

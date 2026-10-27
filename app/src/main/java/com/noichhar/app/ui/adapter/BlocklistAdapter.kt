@@ -10,6 +10,7 @@ import com.noichhar.app.database.entity.BlocklistEntry
 import com.noichhar.app.databinding.ItemBlocklistBinding
 
 class BlocklistAdapter(
+    private val allowMode: Boolean = false,
     private val onDeleteClicked: (BlocklistEntry) -> Unit
 ) : ListAdapter<BlocklistEntry, BlocklistAdapter.ViewHolder>(DIFF_CALLBACK) {
 
@@ -29,7 +30,12 @@ class BlocklistAdapter(
             val context = binding.root.context
             binding.tvDomain.text = if (entry.isWildcard) "*.${entry.domain}" else entry.domain
             binding.tvSource.text = context.getString(
-                if (entry.isWildcard) R.string.source_wildcard else R.string.source_exact
+                when {
+                    allowMode && entry.isWildcard -> R.string.source_allow_wildcard
+                    allowMode -> R.string.source_allow_exact
+                    entry.isWildcard -> R.string.source_wildcard
+                    else -> R.string.source_exact
+                }
             )
             binding.btnDelete.setOnClickListener { onDeleteClicked(entry) }
         }

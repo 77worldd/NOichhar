@@ -31,13 +31,27 @@ object Constants {
     const val DNS_PORT = 53
     const val DOH_PORT = 443
     const val DOT_PORT = 853
+    const val HTTP_PORT = 80
+    const val HTTPS_PORT = 443
+    const val LOCAL_PROXY_ADDRESS = "127.0.0.1"
+    const val LOCAL_PROXY_PORT = 8765
     const val DNS_UDP_BUFFER_SIZE = 1500
     const val DNS_TIMEOUT_MS = 5000
+    const val PROXY_CONNECT_TIMEOUT_MS = 10_000
+    const val PROXY_HEADER_LIMIT = 16 * 1024
+    const val PROXY_BUFFER_SIZE = 32 * 1024
 
     const val MAX_LOG_ENTRIES = 10000
-    const val DNS_CACHE_SIZE = 1000
+    const val DNS_CACHE_SIZE = 2000
     const val DNS_CACHE_TTL_SECONDS = 300L
+    const val MIN_DNS_CACHE_TTL_SECONDS = 15L
+    const val MAX_DNS_CACHE_TTL_SECONDS = 3600L
     const val BLOCKLIST_UPDATE_INTERVAL_MS = 12 * 60 * 60 * 1000L
+    const val NETWORK_SHIELD_REFRESH_INTERVAL_MS = 12 * 60 * 60 * 1000L
+    const val MAX_BLOCKLIST_ENTRIES = 180_000
+    const val MAX_ALLOWLIST_ENTRIES = 20_000
+    const val MAX_NETWORK_SHIELD_ROUTES = 420
+    const val NETWORK_SHIELD_RESOLVE_TIMEOUT_MS = 6_000L
 
     const val PREF_NAME = "noichhar_prefs"
     const val PREF_VPN_ENABLED = "vpn_enabled"
@@ -52,6 +66,25 @@ object Constants {
     const val PREF_BLOCK_NEW_APPS = "block_new_apps"
     const val PREF_LOCKDOWN_MODE = "lockdown_mode"
     const val PREF_LAST_BLOCKLIST_UPDATE = "last_blocklist_update"
+    const val PREF_ADVANCED_PROTECTION = "advanced_protection"
+    const val PREF_BLOCK_DOH_BYPASS = "block_doh_bypass"
+    const val PREF_AUTO_UPDATE_BLOCKLISTS = "auto_update_blocklists"
+    const val PREF_NETWORK_SHIELD_IPS = "network_shield_ips"
+    const val PREF_NETWORK_SHIELD_UPDATED = "network_shield_updated"
+
+    const val WORK_BLOCKLIST_PERIODIC = "noichhar-blocklist-periodic"
+    const val WORK_BLOCKLIST_IMMEDIATE = "noichhar-blocklist-immediate"
+
+    val DEFAULT_BLOCKLIST_URLS: List<String> = listOf(
+        "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.mini.txt",
+        "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+        "https://raw.githubusercontent.com/AdAway/adaway.github.io/master/hosts.txt"
+    )
+
+    val PROTECTED_DNS_IPS: Set<String> = setOf(
+        "1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "149.112.112.112",
+        "94.140.14.14", "94.140.15.15", "208.67.222.222", "208.67.220.220"
+    )
 
     enum class DnsProvider {
         SYSTEM, CLOUDFLARE, GOOGLE, QUAD9, ADGUARD, CUSTOM

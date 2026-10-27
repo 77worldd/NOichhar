@@ -36,6 +36,15 @@ interface BlocklistDao {
     @Query("SELECT * FROM blocklist WHERE isUserAdded = 1 ORDER BY domain ASC")
     fun getUserAddedEntries(): LiveData<List<BlocklistEntry>>
 
+    @Query("SELECT * FROM blocklist WHERE isUserAdded = 1 AND source != 'allow-user' ORDER BY domain ASC")
+    fun getUserBlockEntries(): LiveData<List<BlocklistEntry>>
+
+    @Query("SELECT * FROM blocklist WHERE isUserAdded = 1 AND source = 'allow-user' ORDER BY domain ASC")
+    fun getUserAllowEntries(): LiveData<List<BlocklistEntry>>
+
+    @Query("SELECT * FROM blocklist WHERE isUserAdded = 1")
+    suspend fun getUserEntriesSync(): List<BlocklistEntry>
+
     @Query("DELETE FROM blocklist WHERE isUserAdded = 0")
     suspend fun deleteNonUserEntries()
 

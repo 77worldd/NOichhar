@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Release version (for example v1.0.0)
+        description: Release version (for example v2.0.0)
         required: true
-        default: v1.0.0
+        default: v2.0.0
         type: string
 
 permissions:
@@ -114,6 +114,25 @@ jobs:
           sha256sum "NOichhar-${VERSION}.apk" > "NOichhar-${VERSION}.apk.sha256"
           cp RELEASE_NOTES.md RELEASE_NOTES_GENERATED.md
           printf '\n---\n\nSHA-256: `%s`\n' "$(cut -d' ' -f1 < "NOichhar-${VERSION}.apk.sha256")" >> RELEASE_NOTES_GENERATED.md
+
+      - name: Verify signing-key continuity
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+          if gh release download v1.0.0 --pattern 'NOichhar-v1.0.0.apk' --dir "$RUNNER_TEMP" --clobber; then
+            "$APKSIGNER" verify --print-certs "$RUNNER_TEMP/NOichhar-v1.0.0.apk" \
+              | grep 'SHA-256 digest' | head -n 1 > "$RUNNER_TEMP/old-cert.txt"
+            "$APKSIGNER" verify --print-certs "NOichhar-${VERSION}.apk" \
+              | grep 'SHA-256 digest' | head -n 1 > "$RUNNER_TEMP/new-cert.txt"
+            diff -u "$RUNNER_TEMP/old-cert.txt" "$RUNNER_TEMP/new-cert.txt"
+            echo "Release signing certificate matches v1.0.0"
+          else
+            echo "Could not download v1.0.0 for certificate comparison; continuing"
+          fi
 
       - name: Upload signed release artifacts
         uses: actions/upload-artifact@v4

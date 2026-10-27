@@ -89,10 +89,15 @@ class HomeFragment : Fragment() {
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
+        binding.btnUpdateFilters.setOnClickListener { viewModel.updateBlocklists() }
+        binding.toggleProtection.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) viewModel.setAdvancedProtection(checkedId == R.id.btn_maximum)
+        }
     }
 
     private fun observeData() {
         viewModel.vpnActive.observe(viewLifecycleOwner) { active -> updateUI(active) }
+        viewModel.advancedProtection.observe(viewLifecycleOwner) { enabled -> updateProtectionMode(enabled) }
         viewModel.blockedCount.observe(viewLifecycleOwner) { binding.tvBlockedCount.text = formatCount(it) }
         viewModel.allowedCount.observe(viewLifecycleOwner) { binding.tvAllowedCount.text = formatCount(it) }
         viewModel.totalCount.observe(viewLifecycleOwner) { binding.tvTotalCount.text = formatCount(it) }
@@ -102,6 +107,13 @@ class HomeFragment : Fragment() {
         viewModel.appCount.observe(viewLifecycleOwner) {
             binding.tvAppInfo.text = getString(R.string.app_count, it)
         }
+        viewModel.operationMessage.observe(viewLifecycleOwner) { message ->
+            if (message == null) return@observe
+            val text = message.argument?.let { getString(message.stringRes, it) }
+                ?: getString(message.stringRes)
+            Toast.makeText(requireContext(), text, Toast.LENGTH_SHORT).show()
+            viewModel.clearOperationMessage()
+        }
     }
 
     private fun updateUI(active: Boolean) {
@@ -110,13 +122,33 @@ class HomeFragment : Fragment() {
             binding.tvStatus.text = getString(R.string.vpn_active)
             binding.tvStatusDetail.text = getString(R.string.tap_to_deactivate)
             binding.btnToggle.text = getString(R.string.stop)
+            binding.tvProtectionState.text = getString(R.string.protection_active_short)
+            binding.tvProtectionState.contentDescription = getString(R.string.protection_active_short)
         } else {
             binding.imgShield.setImageResource(R.drawable.ic_shield)
             binding.tvStatus.text = getString(R.string.vpn_inactive)
             binding.tvStatusDetail.text = getString(R.string.tap_to_activate)
             binding.btnToggle.text = getString(R.string.start)
+            binding.tvProtectionState.text = getString(R.string.protection_paused)
+            binding.tvProtectionState.contentDescription = getString(R.string.protection_paused)
         }
         updateConnectionInfo()
+    }
+
+    private fun updateProtectionMode(enabled: Boolean) {
+        binding.toggleProtection.check(
+            if (enabled) R.id.btn_maximum else R.id.btn_balanced
+        )
+        binding.tvProtectionSummary.text = getString(
+            if (enabled) R.string.maximum_protection_summary else R.string.balanced_protection_summary
+        )
+        binding.tvProtectionLayers.text = getString(
+            if (NOichharVpnService.advancedHostFilteringAvailable) {
+                R.string.protection_layers_full
+            } else {
+                R.string.protection_layers_basic
+            }
+        )
     }
 
     private fun updateConnectionInfo() {
