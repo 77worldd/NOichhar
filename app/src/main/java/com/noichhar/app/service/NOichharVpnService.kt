@@ -286,6 +286,7 @@ class NOichharVpnService : VpnService() {
         if (totalCount % Constants.LOG_PRUNE_INTERVAL == 0L) refreshNotification()
 
         if (!NOichharApp.instance.preferenceManager.enableLogs) return
+        // Performance: DNS logging uses batched pruning (every 50 queries) to avoid frequent DB churn
 
         val database = NOichharApp.instance.database
         runCatching {

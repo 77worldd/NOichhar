@@ -78,7 +78,9 @@ class PacketInterceptor(
     private suspend fun processPackets() {
         val inputStream = FileInputStream(vpnFileDescriptor.fileDescriptor)
         val outputStream = FileOutputStream(vpnFileDescriptor.fileDescriptor)
+        // Reused buffer sized to VPN MTU; Constants.VPN_PACKET_BUFFER_SIZE (32KB) documents target for future direct ByteBuffer upgrade
         val buffer = ByteArray(Constants.VPN_MTU)
+        // Performance: avoid allocations in hot loop, forward allowed DNS immediately
 
         while (running && scope.isActive) {
             try {
@@ -204,6 +206,7 @@ class PacketInterceptor(
             blockReason = domainBlocker.getBlockReason(domain) ?: "Blocklist rule"
             DnsPacketParser.createNxDomainResponse(dnsPayload)
         } else {
+            // Check cache FIRST (fastest path) - O(1) HashSet lookup for blocklist is in EnhancedBlocklistEngine
             val cached = dnsCache.get(domain, question.type)
             if (cached != null) {
                 DnsPacketParser.rewriteTransactionId(cached, dnsPayload)

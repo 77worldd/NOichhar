@@ -52,8 +52,8 @@ class RadialChartView @JvmOverloads constructor(context: Context, attrs: Attribu
             canvas.drawArc(rect, angle, (portion - if (segments.size > 1) 3f else 0f).coerceAtLeast(0f), false, paint)
             angle += portion
         }
-        titlePaint.color = ContextCompat.getColor(context, R.color.text_white); titlePaint.textSize = size * .19f
-        labelPaint.color = ContextCompat.getColor(context, R.color.text_secondary); labelPaint.textSize = size * .065f
+        titlePaint.color = ContextCompat.getColor(context, R.color.text_primary); titlePaint.textSize = size * .19f
+        labelPaint.color = ContextCompat.getColor(context, R.color.text_tertiary); labelPaint.textSize = size * .065f
         canvas.drawText(title, cx, cy + size * .02f, titlePaint)
         canvas.drawText(subtitle, cx, cy + size * .15f, labelPaint)
     }

@@ -67,7 +67,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:text="NOichhar"
-            android:textColor="@color/text_white"
+            android:textColor="@color/text_primary"
             android:textSize="34sp"
             android:letterSpacing="-0.02"
             app:fontFamily="@font/inter_bold" />
@@ -132,7 +132,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="—"
-                                android:textColor="@color/accent_cyan"
+                                android:textColor="@color/text_primary"
                                 android:textSize="18sp"
                                 app:fontFamily="@font/inter_bold"
                                 android:layout_marginStart="4dp" />
@@ -148,7 +148,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="—"
-                                android:textColor="@color/accent_mint"
+                                android:textColor="@color/text_tertiary"
                                 android:textSize="18sp"
                                 app:fontFamily="@font/inter_bold"
                                 android:layout_marginStart="4dp" />
@@ -188,7 +188,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textColor="@color/text_white"
+                        android:textColor="@color/text_primary"
                         android:textSize="40sp"
                         app:fontFamily="@font/inter_bold"
                         android:letterSpacing="-0.03" />
@@ -197,7 +197,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="ALLOWED · 7 DAYS"
-                        android:textColor="@color/accent_mint"
+                        android:textColor="@color/text_tertiary"
                         android:textSize="11sp"
                         android:letterSpacing="0.2"
                         app:fontFamily="@font/inter_semibold" />
@@ -221,7 +221,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textColor="@color/text_white"
+                        android:textColor="@color/text_primary"
                         android:textSize="40sp"
                         app:fontFamily="@font/inter_bold"
                         android:letterSpacing="-0.03" />
@@ -230,7 +230,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="BLOCKED · 7 DAYS"
-                        android:textColor="@color/accent_coral"
+                        android:textColor="@color/text_tertiary"
                         android:textSize="11sp"
                         android:letterSpacing="0.2"
                         app:fontFamily="@font/inter_semibold" />
@@ -274,7 +274,7 @@
             android:layout_height="60dp"
             android:gravity="center"
             android:text="ACTIVATE"
-            android:textColor="@color/text_white"
+            android:textColor="@color/button_primary_text"
             android:textSize="15sp"
             android:letterSpacing="0.15"
             app:fontFamily="@font/inter_bold"

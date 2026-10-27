@@ -1,54 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.NOichhar" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="colorPrimary">@color/primary</item>
-        <item name="colorOnPrimary">@color/on_primary</item>
-        <item name="colorPrimaryContainer">@color/primary_container</item>
-        <item name="colorOnPrimaryContainer">@color/on_primary_container</item>
-        <item name="colorPrimaryVariant">@color/primary_variant</item>
-
-        <item name="colorSecondary">@color/secondary</item>
-        <item name="colorOnSecondary">@color/on_secondary</item>
-        <item name="colorSecondaryContainer">@color/secondary_container</item>
-        <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
-        <item name="colorSecondaryVariant">@color/secondary_variant</item>
-
-        <item name="colorTertiary">@color/tertiary</item>
-        <item name="colorOnTertiary">@color/on_tertiary</item>
-        <item name="colorTertiaryContainer">@color/tertiary_container</item>
-        <item name="colorOnTertiaryContainer">@color/on_tertiary_container</item>
-
-        <item name="android:colorBackground">@color/background</item>
-        <item name="colorSurface">@color/surface</item>
-        <item name="colorOnSurface">@color/on_surface</item>
-        <item name="colorSurfaceVariant">@color/surface_variant</item>
-        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
-        <item name="colorOutline">@color/outline</item>
-        <item name="colorOutlineVariant">@color/outline_variant</item>
-
-        <item name="colorError">@color/error</item>
-        <item name="colorOnError">@color/on_error</item>
-        <item name="colorErrorContainer">@color/error_container</item>
-        <item name="colorOnErrorContainer">@color/on_error_container</item>
-
-        <item name="android:statusBarColor">?attr/colorSurface</item>
-        <item name="android:navigationBarColor">@color/nav_bar</item>
+        <item name="colorPrimary">@color/accent_primary</item>
+        <item name="colorOnPrimary">@color/button_primary_text</item>
+        <item name="colorPrimaryContainer">@color/background_card</item>
+        <item name="colorOnPrimaryContainer">@color/text_primary</item>
+        <item name="colorSecondary">@color/accent_secondary</item>
+        <item name="colorOnSecondary">@color/background_primary</item>
+        <item name="colorSecondaryContainer">@color/background_card_elevated</item>
+        <item name="colorOnSecondaryContainer">@color/text_secondary</item>
+        <item name="colorTertiary">@color/accent_muted</item>
+        <item name="colorOnTertiary">@color/background_primary</item>
+        <item name="colorTertiaryContainer">@color/background_card</item>
+        <item name="colorOnTertiaryContainer">@color/text_secondary</item>
+        <item name="android:colorBackground">@color/background_primary</item>
+        <item name="colorSurface">@color/background_primary</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/background_card</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/border_subtle</item>
+        <item name="colorOutlineVariant">@color/border_medium</item>
+        <item name="colorError">@color/status_blocked</item>
+        <item name="colorOnError">@color/text_primary</item>
+        <item name="colorErrorContainer">@color/background_card</item>
+        <item name="colorOnErrorContainer">@color/text_secondary</item>
+        <item name="android:statusBarColor">@color/background_primary</item>
+        <item name="android:navigationBarColor">@color/nav_background</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@color/background_primary</item>
         <item name="android:windowActivityTransitions">true</item>
         <item name="android:windowContentTransitions">true</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="fontFamily">@font/inter</item>
+        <item name="android:lineSpacingExtra">2dp</item>
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.NOichhar.AlertDialog</item>
         <item name="bottomNavigationStyle">@style/Widget.NOichhar.BottomNavigation</item>
         <item name="toolbarStyle">@style/Widget.NOichhar.Toolbar</item>
         <item name="materialButtonStyle">@style/Widget.NOichhar.Button</item>
         <item name="materialSwitchStyle">@style/Widget.NOichhar.Switch</item>
-        <item name="android:fontFamily">@font/inter</item>
-        <item name="fontFamily">@font/inter</item>
-        <item name="android:lineSpacingExtra">2dp</item>
     </style>
 
     <style name="ThemeOverlay.NOichhar.AlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="colorSurface">@color/surface_high</item>
-        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorSurface">@color/background_card_elevated</item>
+        <item name="colorOnSurface">@color/text_primary</item>
         <item name="android:backgroundDimAmount">0.38</item>
     </style>
 </resources>

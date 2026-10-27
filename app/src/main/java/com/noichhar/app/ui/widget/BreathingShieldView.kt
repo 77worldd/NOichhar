@@ -48,9 +48,9 @@ class BreathingShieldView @JvmOverloads constructor(context: Context, attrs: Att
         super.onDraw(canvas)
         val cx = width / 2f; val cy = height / 2f
         val r = minOf(width, height) * 0.25f
-        val color = ContextCompat.getColor(context, if (active) R.color.accent_mint else R.color.text_dim)
+        val color = ContextCompat.getColor(context, if (active) R.color.text_primary else R.color.text_dim)
         if (active) {
-            glow.shader = RadialGradient(cx, cy, r * 1.8f, 0x3310B981, 0x0010B981, Shader.TileMode.CLAMP)
+            glow.shader = RadialGradient(cx, cy, r * 1.8f, 0x22FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
             canvas.drawCircle(cx, cy, r * 1.8f, glow)
             for (i in 0..1) {
                 val p = (phase + i * 0.5f) % 1f

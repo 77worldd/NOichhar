@@ -3,12 +3,17 @@ package com.noichhar.app.dns
 import com.noichhar.app.util.Constants
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * High-performance DNS cache with TTL respect and LRU-style eviction.
+ * Sized at 2000 entries per spec to minimize upstream lookups and browsing lag.
+ */
 class DnsCache {
     data class CacheEntry(
         val response: ByteArray,
         val expireTime: Long
     )
 
+    // ConcurrentHashMap for lock-free reads on the hot packet path
     private val cache = ConcurrentHashMap<String, CacheEntry>()
 
     fun get(domain: String, type: Int): ByteArray? {

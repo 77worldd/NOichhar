@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Spacing System - 8dp grid -->
     <dimen name="padding_small">8dp</dimen>
     <dimen name="padding_medium">16dp</dimen>
     <dimen name="padding_large">24dp</dimen>
@@ -7,9 +8,9 @@
     <dimen name="margin_small">8dp</dimen>
     <dimen name="margin_medium">16dp</dimen>
     <dimen name="margin_large">24dp</dimen>
-    <dimen name="card_radius">20dp</dimen>
+    <dimen name="card_radius">16dp</dimen>
     <dimen name="card_elevation">0dp</dimen>
-    <dimen name="button_radius">18dp</dimen>
+    <dimen name="button_radius">28dp</dimen>
     <dimen name="touch_target">48dp</dimen>
     <dimen name="icon_size_small">24dp</dimen>
     <dimen name="icon_size_medium">40dp</dimen>
@@ -20,9 +21,9 @@
     <dimen name="text_subtitle">17sp</dimen>
     <dimen name="text_body">15sp</dimen>
     <dimen name="text_caption">13sp</dimen>
-    <dimen name="stat_text_size">30sp</dimen>
+    <dimen name="stat_text_size">48sp</dimen>
     <dimen name="radius_squircle_sm">14dp</dimen>
-    <dimen name="radius_squircle">22dp</dimen>
+    <dimen name="radius_squircle">16dp</dimen>
     <dimen name="radius_squircle_lg">28dp</dimen>
     <dimen name="radius_pill">999dp</dimen>
     <dimen name="padding_xs">4dp</dimen>
@@ -35,7 +36,7 @@
     <dimen name="screen_edge">20dp</dimen>
     <dimen name="brand_logo_header">32dp</dimen>
     <dimen name="brand_logo_splash">120dp</dimen>
-    <dimen name="floating_nav_height">72dp</dimen>
+    <dimen name="floating_nav_height">64dp</dimen>
     <dimen name="floating_nav_margin">16dp</dimen>
     <dimen name="text_hero">52sp</dimen>
     <dimen name="text_display">36sp</dimen>

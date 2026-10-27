@@ -31,7 +31,7 @@ class ActivityHeatmapView @JvmOverloads constructor(context: Context, attrs: Att
         val cellH = ((height - labelHeight - gap * 4) / 5f).coerceAtLeast(0f)
         val max = (data.maxOrNull() ?: 0).coerceAtLeast(1)
         val low = ContextCompat.getColor(context, R.color.obsidian_600)
-        val high = ContextCompat.getColor(context, R.color.accent_violet)
+        val high = ContextCompat.getColor(context, R.color.text_primary)
         for (col in 0 until 24) for (row in 0 until 5) {
             val amount = data[col * 5 + row].toFloat() / max
             paint.color = Color.rgb(

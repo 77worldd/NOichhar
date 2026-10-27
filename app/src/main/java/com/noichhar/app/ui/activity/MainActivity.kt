@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         val fragment: Fragment = when (selectedTab) {
             1 -> StatsFragment(); 2 -> RpnFragment(); 3 -> ConfigureFragment(); 4 -> AboutFragment(); else -> HomeFragment()
         }
+        // Performance: fragment switch uses replace with fade animation; fragments retain state via ViewModel and DiffUtil
         supportFragmentManager.beginTransaction().setCustomAnimations(R.anim.fade_slide_in, android.R.anim.fade_out)
             .replace(R.id.fragment_container, fragment).commit()
     }

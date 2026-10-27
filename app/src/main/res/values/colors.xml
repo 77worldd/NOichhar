@@ -1,77 +1,133 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Calm deep-teal + slate palette with warm neutral surfaces. -->
-    <color name="primary">#8B5CF6</color>
-    <color name="primary_variant">#A78BFA</color>
-    <color name="primary_light">#C4B5FD</color>
-    <color name="secondary">#06B6D4</color>
-    <color name="secondary_variant">#0891B2</color>
-    <color name="tertiary">#10B981</color>
+    <!-- Primary Background -->
+    <color name="background_primary">#FF000000</color>
+    <color name="background_secondary">#FF0A0A0A</color>
+    <color name="background_card">#FF141414</color>
+    <color name="background_card_elevated">#FF1A1A1A</color>
+    <color name="background_surface">#FF1E1E1E</color>
 
-    <color name="background">#08080F</color>
-    <color name="surface">#1A1A24</color>
-    <color name="surface_variant">#22222E</color>
-    <color name="surface_high">#282836</color>
-    <color name="card_background">#1A1A24</color>
-    <color name="outline">#5A5A68</color>
-    <color name="outline_variant">#2C2C3A</color>
+    <!-- Text Colors -->
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FFB0B0B0</color>
+    <color name="text_tertiary">#FF707070</color>
+    <color name="text_disabled">#FF404040</color>
+    <color name="text_white">#FFFFFFFF</color>
+    <color name="text_hint">#FF707070</color>
+    <color name="text_dim">#FF404040</color>
 
-    <color name="primary_container">#30214F</color>
-    <color name="on_primary_container">#EEE7FF</color>
-    <color name="secondary_container">#12333A</color>
-    <color name="on_secondary_container">#CFF8FF</color>
-    <color name="tertiary_container">#123A30</color>
-    <color name="on_tertiary_container">#CEFAE8</color>
+    <!-- Accent - Subtle White/Gray only -->
+    <color name="accent_primary">#FFFFFFFF</color>
+    <color name="accent_secondary">#FFE0E0E0</color>
+    <color name="accent_muted">#FF888888</color>
 
-    <color name="error">#FB7185</color>
-    <color name="error_container">#501927</color>
-    <color name="on_error">#FFFFFF</color>
-    <color name="on_error_container">#FFDCE4</color>
+    <!-- Status Colors (subtle, not harsh) -->
+    <color name="status_active">#FFFFFFFF</color>
+    <color name="status_protected">#FFD0D0D0</color>
+    <color name="status_blocked">#FF909090</color>
+    <color name="status_allowed">#FFCCCCCC</color>
+    <color name="status_warning">#FF999999</color>
+    <color name="status_danger">#FF909090</color>
+    <color name="status_inactive">#FF404040</color>
 
-    <color name="on_primary">#FFFFFF</color>
-    <color name="on_secondary">#FFFFFF</color>
-    <color name="on_tertiary">#FFFFFF</color>
-    <color name="on_background">#F5F5F7</color>
-    <color name="on_surface">#F5F5F7</color>
-    <color name="on_surface_variant">#B7B7C2</color>
+    <!-- Borders & Dividers -->
+    <color name="border_subtle">#FF252525</color>
+    <color name="border_medium">#FF333333</color>
+    <color name="border_strong">#FF444444</color>
+    <color name="divider">#FF1A1A1A</color>
 
-    <color name="text_primary">#E8E8EC</color>
-    <color name="text_secondary">#A4A4B1</color>
-    <color name="text_hint">#858593</color>
-    <color name="divider">#2C2C3A</color>
-    <color name="blocked_color">#F43F5E</color>
-    <color name="allowed_color">#10B981</color>
-    <color name="shield_active">#10B981</color>
-    <color name="shield_inactive">#5A5A68</color>
+    <!-- Navigation -->
+    <color name="nav_background">#FF0A0A0A</color>
+    <color name="nav_selected">#FFFFFFFF</color>
+    <color name="nav_unselected">#FF555555</color>
+    <color name="nav_indicator">#FF1A1A1A</color>
+    <color name="nav_bar">#FF000000</color>
 
-    <color name="status_bar">#08080F</color>
-    <color name="nav_bar">#000000</color>
-    <color name="gradient_start">#120F1C</color>
-    <color name="gradient_end">#000000</color>
-    <color name="ripple">#338B5CF6</color>
+    <!-- Buttons -->
+    <color name="button_primary">#FFFFFFFF</color>
+    <color name="button_primary_text">#FF000000</color>
+    <color name="button_secondary">#FF1A1A1A</color>
+    <color name="button_secondary_text">#FFFFFFFF</color>
+    <color name="button_outline_border">#FF333333</color>
+
+    <!-- Chart Colors (grayscale spectrum) -->
+    <color name="chart_line">#FFFFFFFF</color>
+    <color name="chart_fill">#33FFFFFF</color>
+    <color name="chart_grid">#FF1A1A1A</color>
+    <color name="chart_download">#FFFFFFFF</color>
+    <color name="chart_upload">#FF888888</color>
+
+    <!-- Donut Chart (Stats page - elegant grays) -->
+    <color name="chart_segment_1">#FFFFFFFF</color>
+    <color name="chart_segment_2">#FFCCCCCC</color>
+    <color name="chart_segment_3">#FF999999</color>
+    <color name="chart_segment_4">#FF666666</color>
+    <color name="chart_segment_5">#FF444444</color>
+    <color name="chart_segment_6">#FF333333</color>
+
+    <!-- Toggle/Switch -->
+    <color name="toggle_on_track">#FFFFFFFF</color>
+    <color name="toggle_on_thumb">#FF000000</color>
+    <color name="toggle_off_track">#FF333333</color>
+    <color name="toggle_off_thumb">#FF666666</color>
+
+    <!-- Radio buttons -->
+    <color name="radio_selected">#FFFFFFFF</color>
+    <color name="radio_unselected">#FF444444</color>
+
+    <!-- Backward-compatibility aliases for existing layouts / code (remapped to monochrome) -->
+    <color name="primary">#FFFFFFFF</color>
+    <color name="primary_variant">#FFE0E0E0</color>
+    <color name="primary_light">#FFCCCCCC</color>
+    <color name="secondary">#FF888888</color>
+    <color name="secondary_variant">#FF707070</color>
+    <color name="tertiary">#FFCCCCCC</color>
+    <color name="background">#FF000000</color>
+    <color name="surface">#FF0A0A0A</color>
+    <color name="surface_variant">#FF141414</color>
+    <color name="surface_high">#FF1A1A1A</color>
+    <color name="card_background">#FF141414</color>
+    <color name="outline">#FF252525</color>
+    <color name="outline_variant">#FF333333</color>
+    <color name="primary_container">#FF141414</color>
+    <color name="on_primary_container">#FFFFFFFF</color>
+    <color name="secondary_container">#FF1A1A1A</color>
+    <color name="on_secondary_container">#FFB0B0B0</color>
+    <color name="tertiary_container">#FF1A1A1A</color>
+    <color name="on_tertiary_container">#FFB0B0B0</color>
+    <color name="error">#FF909090</color>
+    <color name="error_container">#FF252525</color>
+    <color name="on_error">#FFFFFFFF</color>
+    <color name="on_error_container">#FFB0B0B0</color>
+    <color name="on_primary">#FF000000</color>
+    <color name="on_secondary">#FF000000</color>
+    <color name="on_tertiary">#FF000000</color>
+    <color name="on_background">#FFFFFFFF</color>
+    <color name="on_surface">#FFFFFFFF</color>
+    <color name="on_surface_variant">#FFB0B0B0</color>
+    <color name="blocked_color">#FF909090</color>
+    <color name="allowed_color">#FFCCCCCC</color>
+    <color name="shield_active">#FFFFFFFF</color>
+    <color name="shield_inactive">#FF404040</color>
+    <color name="status_bar">#FF000000</color>
+    <color name="gradient_start">#FF0A0A0A</color>
+    <color name="gradient_end">#FF000000</color>
+    <color name="ripple">#22FFFFFF</color>
     <color name="scrim">#99000000</color>
-
-    <color name="obsidian_900">#000000</color>
-    <color name="obsidian_800">#0A0A0F</color>
-    <color name="obsidian_700">#111118</color>
-    <color name="obsidian_600">#161620</color>
-    <color name="obsidian_500">#1C1C28</color>
-    <color name="glass_surface">#1A1A24</color>
-    <color name="glass_surface_elevated">#22222E</color>
-    <color name="glass_border">#2C2C3A</color>
-    <color name="glass_border_bright">#3A3A4D</color>
-    <color name="accent_violet">#8B5CF6</color>
-    <color name="accent_violet_bright">#A78BFA</color>
-    <color name="accent_violet_glow">#4D8B5CF6</color>
-    <color name="accent_cyan">#06B6D4</color>
-    <color name="accent_mint">#10B981</color>
-    <color name="accent_coral">#F43F5E</color>
-    <color name="accent_amber">#F59E0B</color>
-    <color name="text_white">#F5F5F7</color>
-    <color name="text_tertiary">#858593</color>
-    <color name="text_dim">#5A5A68</color>
-    <color name="status_protected">#10B981</color>
-    <color name="status_warning">#F59E0B</color>
-    <color name="status_danger">#F43F5E</color>
-    <color name="status_inactive">#5A5A68</color>
+    <color name="obsidian_900">#FF000000</color>
+    <color name="obsidian_800">#FF0A0A0A</color>
+    <color name="obsidian_700">#FF141414</color>
+    <color name="obsidian_600">#FF1A1A1A</color>
+    <color name="obsidian_500">#FF1E1E1E</color>
+    <color name="glass_surface">#FF141414</color>
+    <color name="glass_surface_elevated">#FF1A1A1A</color>
+    <color name="glass_border">#FF252525</color>
+    <color name="glass_border_bright">#FF333333</color>
+    <color name="accent_violet">#FFFFFFFF</color>
+    <color name="accent_violet_bright">#FFCCCCCC</color>
+    <color name="accent_violet_glow">#22FFFFFF</color>
+    <color name="accent_cyan">#FF888888</color>
+    <color name="accent_mint">#FFCCCCCC</color>
+    <color name="accent_coral">#FF909090</color>
+    <color name="accent_amber">#FF999999</color>
 </resources>

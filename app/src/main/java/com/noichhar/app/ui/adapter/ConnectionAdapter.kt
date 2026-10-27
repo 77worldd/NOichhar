@@ -33,7 +33,7 @@ class ConnectionAdapter : ListAdapter<ConnectionLog, ConnectionAdapter.ViewHolde
                 if (log.isBlocked) R.string.connection_blocked else R.string.connection_allowed
             )
             binding.tvProtocol.setTextColor(
-                context.getColor(if (log.isBlocked) R.color.blocked_color else R.color.allowed_color)
+                context.getColor(if (log.isBlocked) R.color.status_blocked else R.color.status_allowed)
             )
 
             val packageName = PackageUtils.getPackageNameForUid(context, log.appUid)

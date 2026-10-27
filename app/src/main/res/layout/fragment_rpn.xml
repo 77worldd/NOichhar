@@ -26,7 +26,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Firewall Rules"
-            android:textColor="@color/text_white"
+            android:textColor="@color/text_primary"
             android:textSize="28sp"
             app:fontFamily="@font/inter_bold"
             android:layout_marginTop="4dp"
@@ -46,7 +46,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Blocklist Status"
-                    android:textColor="@color/text_white"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     app:fontFamily="@font/inter_semibold" />
 
@@ -66,7 +66,7 @@
                     android:layout_height="48dp"
                     android:gravity="center"
                     android:text="Update Blocklists Now"
-                    android:textColor="@color/text_white"
+                    android:textColor="@color/button_primary_text"
                     app:fontFamily="@font/inter_semibold"
                     android:background="@drawable/bg_action_primary"
                     android:layout_marginTop="16dp"
@@ -79,7 +79,7 @@
                     android:layout_height="48dp"
                     android:gravity="center"
                     android:text="Add Custom Rule"
-                    android:textColor="@color/accent_mint"
+                    android:textColor="@color/text_primary"
                     app:fontFamily="@font/inter_semibold"
                     android:background="@drawable/bg_action_outline"
                     android:layout_marginTop="10dp"
@@ -103,7 +103,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Operation Mode"
-                    android:textColor="@color/text_white"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     app:fontFamily="@font/inter_semibold" />
 
@@ -146,15 +146,15 @@
             android:textSize="13sp" android:textColor="@color/text_secondary" />
         <TextView android:id="@+id/btn_manage_rules" android:layout_width="match_parent" android:layout_height="52dp"
             android:layout_marginTop="16dp" android:gravity="center" android:text="Manage block and allow rules"
-            android:textColor="@color/text_white" android:background="@drawable/bg_action_outline"
+            android:textColor="@color/text_primary" android:background="@drawable/bg_action_outline"
             android:clickable="true" android:focusable="true" />
         <TextView android:id="@+id/btn_manage_apps" android:layout_width="match_parent" android:layout_height="52dp"
             android:layout_marginTop="10dp" android:gravity="center" android:text="Manage app rules"
-            android:textColor="@color/text_white" android:background="@drawable/bg_action_outline"
+            android:textColor="@color/text_primary" android:background="@drawable/bg_action_outline"
             android:clickable="true" android:focusable="true" />
         <TextView android:id="@+id/btn_view_logs" android:layout_width="match_parent" android:layout_height="52dp"
             android:layout_marginTop="10dp" android:gravity="center" android:text="View request logs"
-            android:textColor="@color/text_white" android:background="@drawable/bg_action_outline"
+            android:textColor="@color/text_primary" android:background="@drawable/bg_action_outline"
             android:clickable="true" android:focusable="true" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

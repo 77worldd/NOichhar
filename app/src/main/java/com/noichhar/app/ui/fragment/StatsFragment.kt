@@ -64,8 +64,8 @@ class StatsFragment : Fragment() {
         vm.topConnections.observe(viewLifecycleOwner) { list ->
             topAdapter.submitList(list)
             b.tvNoRequests.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
-            val palette = listOf(R.color.accent_violet, R.color.accent_mint, R.color.accent_cyan,
-                R.color.accent_amber, R.color.accent_coral, R.color.accent_violet_bright)
+            val palette = listOf(R.color.chart_segment_1, R.color.chart_segment_2, R.color.chart_segment_3,
+                R.color.chart_segment_4, R.color.chart_segment_5, R.color.chart_segment_6)
                 .map { ContextCompat.getColor(requireContext(), it) }
             val segments = list.mapIndexed { i, stat -> ChartSegment(stat.totalConn.toFloat(), palette[i % palette.size], stat.appName) }
             b.radialChart.setData(segments, FormatUtils.formatCount(list.sumOf { it.totalConn }), "TOP APPS")

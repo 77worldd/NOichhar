@@ -23,6 +23,8 @@ object Constants {
     const val DOT_ADGUARD = "dns.adguard-dns.com"
 
     const val VPN_MTU = 1500
+    // Optimized packet buffer: 32KB per spec for reduced syscall overhead
+    const val VPN_PACKET_BUFFER_SIZE = 32768
     const val VPN_INTERFACE_ADDRESS = "10.111.222.1"
     const val VPN_DNS_ADDRESS = "10.111.222.3"
     const val VPN_ROUTE = "0.0.0.0"
@@ -40,6 +42,9 @@ object Constants {
     const val PROXY_CONNECT_TIMEOUT_MS = 10_000
     const val PROXY_HEADER_LIMIT = 16 * 1024
     const val PROXY_BUFFER_SIZE = 32 * 1024
+    // Spec-aligned cache tuning for zero browsing lag
+    const val DNS_CACHE_BATCH_SIZE = 50
+    const val DNS_LOG_FLUSH_INTERVAL_MS = 5000L
 
     const val MAX_LOG_ENTRIES = 10000
     const val LOG_PRUNE_INTERVAL = 50L

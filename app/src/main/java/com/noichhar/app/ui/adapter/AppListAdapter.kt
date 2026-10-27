@@ -64,7 +64,7 @@ class AppListAdapter(
         private fun tintNetworkButton(button: android.widget.ImageButton, enabled: Boolean) {
             val color = ContextCompat.getColor(
                 button.context,
-                if (enabled) R.color.allowed_color else R.color.text_hint
+                if (enabled) R.color.text_tertiary else R.color.text_hint
             )
             button.setColorFilter(color)
             button.alpha = if (enabled) 1.0f else 0.55f

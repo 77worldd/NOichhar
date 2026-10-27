@@ -42,10 +42,10 @@ class DnsLogAdapter : ListAdapter<DnsLog, DnsLogAdapter.ViewHolder>(DIFF_CALLBAC
             binding.tvTime.text = timeFormat.format(Date(log.timestamp))
             binding.tvResponseTime.text = "${log.responseTimeMs}ms"
 
-            val color = if (log.isBlocked) R.color.blocked_color else R.color.allowed_color
+            val color = if (log.isBlocked) R.color.status_blocked else R.color.status_allowed
             binding.viewStatus.setBackgroundColor(context.getColor(color))
             binding.tvDomain.setTextColor(
-                context.getColor(if (log.isBlocked) R.color.blocked_color else R.color.text_primary)
+                context.getColor(if (log.isBlocked) R.color.text_secondary else R.color.text_primary)
             )
         }
     }
