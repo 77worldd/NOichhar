@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import android.util.Log
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
@@ -19,6 +20,8 @@ import com.noichhar.app.service.NOichharVpnService
 import com.noichhar.app.ui.activity.MainActivity
 import com.noichhar.app.util.Constants
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -62,9 +65,17 @@ class VpnSmokeTest {
                     val apk = instrumentation.context.packageCodePath
                     val command = "CLASSPATH='$apk' app_process /system/bin " +
                         "com.noichhar.app.DnsProbe ${Constants.VPN_DNS_ADDRESS} $domain 2>&1"
-                    val output = instrumentation.uiAutomation.executeShellCommand(command).let { fd ->
-                        ParcelFileDescriptor.AutoCloseInputStream(fd).bufferedReader().use { it.readText() }
+                    val fd = instrumentation.uiAutomation.executeShellCommand(command)
+                    val executor = Executors.newSingleThreadExecutor()
+                    val output = try {
+                        executor.submit<String> {
+                            ParcelFileDescriptor.AutoCloseInputStream(fd).bufferedReader().use { it.readText() }
+                        }.get(25, TimeUnit.SECONDS)
+                    } finally {
+                        runCatching { fd.close() }
+                        executor.shutdownNow()
                     }
+                    Log.e("NOICHAR_TEST_FAILURE", "DNS probe output: ${output.take(3000)}")
                     assertTrue("UDP probe failed: $output", output.contains("UDP_BLOCKED_OK"))
                     assertTrue("TCP probe failed: $output", output.contains("TCP_BLOCKED_OK"))
                 } finally {
@@ -76,6 +87,9 @@ class VpnSmokeTest {
                 while (NOichharVpnService.isActive && SystemClock.elapsedRealtime() < stopDeadline) SystemClock.sleep(100)
                 assertFalse("VPN service did not stop", NOichharVpnService.isActive)
             }
+        } catch (failure: Throwable) {
+            Log.e("NOICHAR_TEST_FAILURE", "VPN smoke test failed", failure)
+            throw failure
         } finally {
             NOichharVpnService.instance?.stopVpn()
             app.preferenceManager.protectionMode = originalMode

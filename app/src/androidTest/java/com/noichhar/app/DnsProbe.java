@@ -34,6 +34,8 @@ public final class DnsProbe {
             check(response, response.length);
             System.out.println("TCP_BLOCKED_OK");
         }
+        // app_process may otherwise retain framework threads after main returns.
+        System.exit(0);
     }
 
     private static byte[] query(String domain) throws Exception {

@@ -65,8 +65,8 @@ jobs:
 
   android-smoke:
     name: Android API ${{ matrix.api }} smoke tests
-    needs: test-and-build
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -94,10 +94,30 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest
+          script: |
+            if ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest > /tmp/noichhar-emulator.log 2>&1; then
+              status=0
+            else
+              status=$?
+            fi
+            cat /tmp/noichhar-emulator.log
+            adb logcat -d -s NOICHAR_TEST_FAILURE:E AndroidRuntime:E TestRunner:E > /tmp/noichhar-device-log.txt || true
+            exit "$status"
       - name: Annotate instrumentation failures
         if: failure()
-        run: python3 .github/workflows/report_failures.py /dev/null 'app/build/outputs/androidTest-results/**/*.xml'
+        run: python3 .github/workflows/report_failures.py /tmp/noichhar-emulator.log 'app/build/outputs/androidTest-results/**/*.xml'
+      - name: Annotate device crash details
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/noichhar-device-log.txt')
+          if path.exists():
+              text = path.read_text(errors='replace')[-12000:]
+              for i in range(0, len(text), 3500):
+                  part = text[i:i+3500].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                  print(f'::error::{part}')
+          PY
       - name: Upload instrumentation report
         if: always()
         uses: actions/upload-artifact@v4
