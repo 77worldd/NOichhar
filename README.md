@@ -51,4 +51,4 @@ Automatic updates are configured for [HaGeZi](https://github.com/hagezi/dns-bloc
 
 ## Verification
 
-CI validates XML, runs JVM tests including 500,000-domain and atomic-reload coverage, and performs clean debug and release builds. Android instrumentation tests on API 24 and 29 cover database migration, aggregate queries, mode/settings persistence, five-tab navigation and real local VPN start/stop. No test can establish universal filtering across all Android devices or traffic that bypasses the operating system's VPN DNS/proxy configuration.
+CI validates XML, runs JVM tests including 500,000-domain and atomic-reload coverage, and performs clean debug and release builds. Android instrumentation tests on API 24 and 29 cover database migration, aggregate queries, mode/settings persistence, five-tab navigation, real local VPN start/stop and blocked DNS requests over UDP and TCP port 53. No test can establish universal filtering across all Android devices or traffic that bypasses the operating system's VPN DNS/proxy configuration.
