@@ -25,6 +25,18 @@ class EnhancedBlocklistEngineTest {
         assertFalse(engine.isBlocked("notads499999.example.test"))
     }
 
+    @Test fun userRulesOverrideDownloadedExceptionsWithoutOverridingUserAllows() {
+        val engine = EnhancedBlocklistEngine()
+        engine.loadRules(listOf(
+            BlockRule("*.example.test", wildcard = true, allow = true),
+            BlockRule("ads.example.test", user = true),
+            BlockRule("safe.ads.example.test", allow = true, user = true)
+        ))
+        assertTrue(engine.isBlocked("pixel.ads.example.test"))
+        assertFalse(engine.isBlocked("safe.ads.example.test"))
+        assertFalse(engine.isBlocked("other.example.test"))
+    }
+
     @Test fun reloadsPublishAtomicallyToReaders() {
         val engine = EnhancedBlocklistEngine()
         val first = (0 until 1_000).map { BlockRule("ads$it.example.test") } + BlockRule("always.blocked.test")

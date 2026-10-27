@@ -111,6 +111,10 @@
             </LinearLayout>
         </com.noichhar.app.ui.widget.GlassCardView>
 
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" android:textSize="13sp" android:textColor="@color/text_secondary"
+            android:text="Turning off detailed logging still keeps anonymous per-app request counts for statistics, for up to seven days." />
+
         <com.noichhar.app.ui.widget.GlassCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -68,7 +68,7 @@
                 android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON"
                 android:value="true" />
             <property
-                android:name="android.android.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Local DNS filtering and ad blocking" />
         </service>
 

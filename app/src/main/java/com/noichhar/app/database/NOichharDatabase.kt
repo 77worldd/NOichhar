@@ -25,7 +25,7 @@ abstract class NOichharDatabase : RoomDatabase() {
     companion object {
         // Preserve v1 app rules, blocklists and DNS logs on upgrade. Existing DNS
         // events become anonymous aggregates; byte totals begin with v2 tracking.
-        private val MIGRATION_1_2 = object : Migration(1, 2) {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""CREATE TABLE IF NOT EXISTS `traffic_stat` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     `appUid` INTEGER NOT NULL, `packageName` TEXT NOT NULL, `appName` TEXT NOT NULL,

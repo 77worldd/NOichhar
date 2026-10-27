@@ -189,9 +189,9 @@ class TrafficTracker(private val context: Context) {
             val bucket = NetworkStats.Bucket()
             while (summary.hasNextBucket()) {
                 summary.getNextBucket(bucket)
-                // Metered classification exists on Android 9+. Older Android
+                // Metered classification exists on Android 8+. Older Android
                 // releases expose only transport; Wi-Fi/mobile is an estimate.
-                val metered = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val metered = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     when (bucket.metered) { 1 -> false; 2 -> true; else -> type == ConnectivityManager.TYPE_MOBILE }
                 } else type == ConnectivityManager.TYPE_MOBILE
                 val key = Key(bucket.uid, metered)

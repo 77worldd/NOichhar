@@ -28,7 +28,6 @@ android {
         }
         debug {
             isMinifyEnabled = false
-            applicationIdSuffix = ".debug"
         }
     }
 
@@ -75,4 +74,9 @@ dependencies {
     implementation(libs.swiperefreshlayout)
     implementation(libs.viewpager2)
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.espresso.core)
+    androidTestImplementation(libs.uiautomator)
 }

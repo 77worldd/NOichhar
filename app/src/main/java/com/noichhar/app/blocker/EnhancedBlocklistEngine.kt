@@ -3,9 +3,10 @@ package com.noichhar.app.blocker
 import com.noichhar.app.util.DomainValidator
 
 /**
- * Lock-free reads against an immutable, atomically swapped rules snapshot. Domain
- * suffixes are checked at label boundaries; allow rules always take precedence.
- * A Bloom filter avoids expensive hash-set probes for most non-blocked domains.
+ * Lock-free reads against an immutable, atomically swapped rules snapshot.
+ * Suffixes are checked at label boundaries. User allows win over user blocks;
+ * user blocks win over downloaded exceptions; downloaded allows win over lists.
+ * Bloom positives are always confirmed in the relevant set (no false blocks).
  */
 open class EnhancedBlocklistEngine {
     private data class Snapshot(
@@ -13,11 +14,15 @@ open class EnhancedBlocklistEngine {
         val wildcards: Set<String> = emptySet(),
         val allowExact: Set<String> = emptySet(),
         val allowWildcards: Set<String> = emptySet(),
+        val userExact: Set<String> = emptySet(),
+        val userWildcards: Set<String> = emptySet(),
+        val userAllowExact: Set<String> = emptySet(),
+        val userAllowWildcards: Set<String> = emptySet(),
         val bloom: BloomFilterBlocklist = BloomFilterBlocklist(0)
     )
 
     @Volatile private var snapshot = Snapshot()
-    val domainCount: Int get() = snapshot.let { it.exact.size + it.wildcards.size }
+    val domainCount: Int get() = snapshot.let { it.exact.size + it.wildcards.size + it.userExact.size + it.userWildcards.size }
 
     fun loadDomains(domains: List<String>) = loadRules(domains.map { BlockRule(it) })
 
@@ -27,38 +32,50 @@ open class EnhancedBlocklistEngine {
         val wildcards = HashSet<String>()
         val allows = HashSet<String>()
         val allowWildcards = HashSet<String>()
+        val userExact = HashSet<String>()
+        val userWildcards = HashSet<String>()
+        val userAllows = HashSet<String>()
+        val userAllowWildcards = HashSet<String>()
         rules.forEach { rule ->
             val normalized = DomainValidator.normalize(rule.domain) ?: return@forEach
+            val wildcard = rule.wildcard || normalized.wildcard
             when {
-                rule.allow && (rule.wildcard || normalized.wildcard) -> allowWildcards.add(normalized.domain)
+                rule.user && rule.allow && wildcard -> userAllowWildcards.add(normalized.domain)
+                rule.user && rule.allow -> userAllows.add(normalized.domain)
+                rule.user && wildcard -> userWildcards.add(normalized.domain)
+                rule.user -> userExact.add(normalized.domain)
+                rule.allow && wildcard -> allowWildcards.add(normalized.domain)
                 rule.allow -> allows.add(normalized.domain)
-                rule.wildcard || normalized.wildcard -> wildcards.add(normalized.domain)
+                wildcard -> wildcards.add(normalized.domain)
                 else -> exact.add(normalized.domain)
             }
         }
-        publish(exact, wildcards, allows, allowWildcards)
+        publish(Snapshot(exact, wildcards, allows, allowWildcards,
+            userExact, userWildcards, userAllows, userAllowWildcards))
     }
 
     @Synchronized
     fun addDomain(domain: String) {
         val rule = DomainValidator.normalize(domain) ?: return
         val old = snapshot
-        val exact = old.exact.toMutableSet()
-        val wildcards = old.wildcards.toMutableSet()
-        val allows = old.allowExact.toMutableSet()
-        val allowWildcards = old.allowWildcards.toMutableSet()
-        if (rule.wildcard) wildcards.add(rule.domain) else exact.add(rule.domain)
-        allows.remove(rule.domain)
-        allowWildcards.remove(rule.domain)
-        publish(exact, wildcards, allows, allowWildcards)
+        publish(old.copy(
+            exact = old.exact - rule.domain, wildcards = old.wildcards - rule.domain,
+            allowExact = old.allowExact - rule.domain, allowWildcards = old.allowWildcards - rule.domain,
+            userExact = if (rule.wildcard) old.userExact else old.userExact + rule.domain,
+            userWildcards = if (rule.wildcard) old.userWildcards + rule.domain else old.userWildcards,
+            userAllowExact = old.userAllowExact - rule.domain,
+            userAllowWildcards = old.userAllowWildcards - rule.domain
+        ))
     }
 
     @Synchronized
     fun removeDomain(domain: String) {
         val rule = DomainValidator.normalize(domain) ?: return
         val old = snapshot
-        publish(old.exact - rule.domain, old.wildcards - rule.domain,
-            old.allowExact - rule.domain, old.allowWildcards - rule.domain)
+        publish(old.copy(exact = old.exact - rule.domain, wildcards = old.wildcards - rule.domain,
+            allowExact = old.allowExact - rule.domain, allowWildcards = old.allowWildcards - rule.domain,
+            userExact = old.userExact - rule.domain, userWildcards = old.userWildcards - rule.domain,
+            userAllowExact = old.userAllowExact - rule.domain, userAllowWildcards = old.userAllowWildcards - rule.domain))
     }
 
     fun addWhitelist(domain: String) = addAllowRule(domain, includeSubdomains = true)
@@ -67,11 +84,10 @@ open class EnhancedBlocklistEngine {
     fun addAllowRule(domain: String, includeSubdomains: Boolean = false) {
         val rule = DomainValidator.normalize(domain) ?: return
         val old = snapshot
-        if (rule.wildcard || includeSubdomains) {
-            publish(old.exact, old.wildcards, old.allowExact, old.allowWildcards + rule.domain)
-        } else {
-            publish(old.exact, old.wildcards, old.allowExact + rule.domain, old.allowWildcards)
-        }
+        publish(old.copy(
+            userAllowExact = if (rule.wildcard || includeSubdomains) old.userAllowExact else old.userAllowExact + rule.domain,
+            userAllowWildcards = if (rule.wildcard || includeSubdomains) old.userAllowWildcards + rule.domain else old.userAllowWildcards
+        ))
     }
 
     fun isBlocked(rawDomain: String): Boolean = getBlockReason(rawDomain) != null
@@ -79,39 +95,38 @@ open class EnhancedBlocklistEngine {
     fun getBlockReason(rawDomain: String): String? {
         val domain = DomainValidator.normalize(rawDomain)?.domain ?: return null
         val rules = snapshot
-        if (domain in rules.allowExact) return null
         val suffixes = suffixes(domain)
-        if (suffixes.any { it in rules.allowWildcards }) return null
+        if (domain in rules.userAllowExact || suffixes.any { it in rules.userAllowWildcards }) return null
+        findMatch(suffixes, rules.userExact, rules.userWildcards, rules.bloom)?.let { return it }
+        if (domain in rules.allowExact || suffixes.any { it in rules.allowWildcards }) return null
+        return findMatch(suffixes, rules.exact, rules.wildcards, rules.bloom)
+    }
+
+    private fun findMatch(suffixes: List<String>, exact: Set<String>, wildcards: Set<String>, bloom: BloomFilterBlocklist): String? {
+        if (exact.isEmpty() && wildcards.isEmpty()) return null
         suffixes.forEachIndexed { index, suffix ->
-            if (!rules.bloom.mightContain(suffix)) return@forEachIndexed
-            if (suffix in rules.exact) {
-                return if (index == 0) "Direct match: $suffix" else "Parent domain: $suffix"
-            }
-            if (suffix in rules.wildcards) return "Wildcard: *.$suffix"
+            if (!bloom.mightContain(suffix)) return@forEachIndexed
+            if (suffix in exact) return if (index == 0) "Direct match: $suffix" else "Parent domain: $suffix"
+            if (suffix in wildcards) return "Wildcard: *.$suffix"
         }
         return null
     }
 
     fun blockedRuleCount(): Int = domainCount
-    fun allowRuleCount(): Int = snapshot.let { it.allowExact.size + it.allowWildcards.size }
-
+    fun allowRuleCount(): Int = snapshot.let { it.allowExact.size + it.allowWildcards.size + it.userAllowExact.size + it.userAllowWildcards.size }
     @Synchronized fun clear() { snapshot = Snapshot() }
 
-    private fun publish(exact: Set<String>, wildcards: Set<String>,
-                        allows: Set<String>, allowWildcards: Set<String>) {
-        val bloom = BloomFilterBlocklist(exact.size + wildcards.size)
-        exact.forEach(bloom::add)
-        wildcards.forEach(bloom::add)
-        snapshot = Snapshot(exact, wildcards, allows, allowWildcards, bloom)
+    private fun publish(next: Snapshot) {
+        val bloom = BloomFilterBlocklist(next.exact.size + next.wildcards.size + next.userExact.size + next.userWildcards.size)
+        next.exact.forEach(bloom::add); next.wildcards.forEach(bloom::add)
+        next.userExact.forEach(bloom::add); next.userWildcards.forEach(bloom::add)
+        snapshot = next.copy(bloom = bloom)
     }
 
     private fun suffixes(domain: String): List<String> {
         val result = ArrayList<String>(4)
         var value = domain
-        while (value.contains('.')) {
-            result.add(value)
-            value = value.substringAfter('.')
-        }
+        while (value.contains('.')) { result.add(value); value = value.substringAfter('.') }
         return result
     }
 }

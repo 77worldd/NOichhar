@@ -4,7 +4,8 @@ package com.noichhar.app.blocker
 data class BlockRule(
     val domain: String,
     val wildcard: Boolean = false,
-    val allow: Boolean = false
+    val allow: Boolean = false,
+    val user: Boolean = false
 )
 
 /** Compatibility name retained for existing callers and integrations. */
