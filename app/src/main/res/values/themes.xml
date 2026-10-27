@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.NOichhar" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.NOichhar" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorPrimaryContainer">@color/primary_container</item>
@@ -33,7 +33,7 @@
 
         <item name="android:statusBarColor">?attr/colorSurface</item>
         <item name="android:navigationBarColor">@color/nav_bar</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowActivityTransitions">true</item>
         <item name="android:windowContentTransitions">true</item>
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.NOichhar.AlertDialog</item>
@@ -41,7 +41,7 @@
         <item name="toolbarStyle">@style/Widget.NOichhar.Toolbar</item>
         <item name="materialButtonStyle">@style/Widget.NOichhar.Button</item>
         <item name="materialSwitchStyle">@style/Widget.NOichhar.Switch</item>
-        <item name="android:fontFamily">sans</item>
+        <item name="android:fontFamily">@font/inter</item>
         <item name="android:lineSpacingExtra">2dp</item>
     </style>
 

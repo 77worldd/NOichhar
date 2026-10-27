@@ -58,14 +58,8 @@ class SettingsFragment : Fragment() {
             prefManager.enableLogs = isChecked
         }
 
-        binding.switchDarkMode.isChecked = prefManager.darkMode
-        binding.switchDarkMode.setOnCheckedChangeListener { _, isChecked ->
-            prefManager.darkMode = isChecked
-            AppCompatDelegate.setDefaultNightMode(
-                if (isChecked) AppCompatDelegate.MODE_NIGHT_YES
-                else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-            )
-        }
+        // Obsidian is intentionally dark-first; do not expose a nonfunctional theme switch.
+        binding.switchDarkMode.visibility = View.GONE
 
         binding.switchAdvancedProtection.isChecked = prefManager.advancedProtection
         binding.switchAdvancedProtection.setOnCheckedChangeListener { _, isChecked ->
@@ -116,13 +110,13 @@ class SettingsFragment : Fragment() {
             packageManager.getPackageInfo(
                 requireContext().packageName,
                 PackageManager.PackageInfoFlags.of(0)
-            ).versionName ?: "2.0.1"
+            ).versionName ?: "unknown"
         } else {
             @Suppress("DEPRECATION")
-            packageManager.getPackageInfo(requireContext().packageName, 0).versionName ?: "2.0.1"
+            packageManager.getPackageInfo(requireContext().packageName, 0).versionName ?: "unknown"
         }
     } catch (_: Exception) {
-        "2.0.1"
+        "unknown"
     }
 
     override fun onDestroyView() {

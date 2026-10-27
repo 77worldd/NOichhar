@@ -9,7 +9,7 @@ on:
       version:
         description: Release version (for example v2.0.1)
         required: true
-        default: v2.0.1
+        default: v2.1.0
         type: string
 
 permissions:
@@ -50,25 +50,11 @@ jobs:
           path: signing
           key: noichhar-official-release-keystore-${{ runner.os }}-v3
 
-      - name: Create official signing key on first run
+      - name: Require the existing official signing key
         if: steps.keystore-cache.outputs.cache-hit != 'true'
         run: |
-          set -euo pipefail
-          mkdir -p signing
-          PASSWORD="$(openssl rand -hex 24)"
-          printf '%s\n' "$PASSWORD" > signing/password.txt
-          keytool -genkeypair \
-            -alias noichhar \
-            -keyalg RSA \
-            -keysize 3072 \
-            -validity 10000 \
-            -storetype PKCS12 \
-            -keystore signing/release.p12 \
-            -storepass "$PASSWORD" \
-            -keypass "$PASSWORD" \
-            -dname "CN=NOichhar Official Release, O=77worldd, C=MA" \
-            -noprompt
-          chmod 600 signing/release.p12 signing/password.txt
+          echo "Official signing key cache is unavailable; refusing to create an incompatible key." >&2
+          exit 1
 
       - name: Determine release version
         id: version
@@ -79,9 +65,12 @@ jobs:
           else
             VERSION="${GITHUB_REF_NAME}"
           fi
-          if [ -z "$VERSION" ]; then
-            echo "A release version is required" >&2
-            exit 1
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a version such as v2.1.0" >&2; exit 1
+          fi
+          APP_VERSION="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts)"
+          if [ "v$APP_VERSION" != "$VERSION" ]; then
+            echo "Release version does not match the application version" >&2; exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
@@ -89,7 +78,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run unit tests and build release APK
-        run: ./gradlew --no-daemon --stacktrace testDebugUnitTest assembleRelease
+        run: ./gradlew --no-daemon --stacktrace clean testDebugUnitTest assembleRelease
 
       - name: Align, sign and verify APK
         env:
@@ -154,5 +143,5 @@ jobs:
           draft: false
           prerelease: false
           make_latest: true
-          overwrite_files: true
+          overwrite_files: false
           fail_on_unmatched_files: true

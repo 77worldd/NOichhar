@@ -15,6 +15,10 @@ class PreferenceManager(context: Context) {
         return runCatching { enumValueOf<T>(stored) }.getOrDefault(fallback)
     }
 
+    var protectionMode: Constants.ProtectionMode
+        get() = readEnum(Constants.PREF_PROTECTION_MODE, Constants.ProtectionMode.BOTH)
+        set(value) = prefs.edit().putString(Constants.PREF_PROTECTION_MODE, value.name).apply()
+
     var vpnEnabled: Boolean
         get() = prefs.getBoolean(Constants.PREF_VPN_ENABLED, false)
         set(value) = prefs.edit().putBoolean(Constants.PREF_VPN_ENABLED, value).apply()

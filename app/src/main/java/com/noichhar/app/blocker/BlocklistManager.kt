@@ -23,13 +23,14 @@ class BlocklistManager(
     private val context: Context,
     private val database: NOichharDatabase
 ) {
-    val domainBlocker = DomainBlocker()
+    val domainBlocker = EnhancedBlocklistEngine()
 
     private val appContext = context.applicationContext
     private val dao = database.blocklistDao()
     private val preferences = NOichharApp.instance.preferenceManager
     private val parser = HostsFileParser()
     private val initMutex = Mutex()
+    private val updateMutex = Mutex()
 
     @Volatile
     private var initialized = false
@@ -96,7 +97,7 @@ class BlocklistManager(
             isUserAdded = true
         )
         dao.insert(entry)
-        domainBlocker.addDomain(DomainValidator.display(rule))
+        loadFromDatabase()
         true
     }
 
@@ -117,32 +118,32 @@ class BlocklistManager(
     suspend fun removeDomain(rawDomain: String) = withContext(Dispatchers.IO) {
         val rule = DomainValidator.normalize(rawDomain) ?: return@withContext
         dao.deleteUserDomain(rule.domain)
-        domainBlocker.removeDomain(DomainValidator.display(rule))
         loadFromDatabase()
     }
 
-    suspend fun updateBlocklists(urls: List<String> = Constants.DEFAULT_BLOCKLIST_URLS): Int = withContext(Dispatchers.IO) {
+    suspend fun updateBlocklists(urls: List<String> = Constants.DEFAULT_BLOCKLIST_URLS): Int =
+        updateMutex.withLock { updateBlocklistsInternal(urls) }
+
+    private suspend fun updateBlocklistsInternal(urls: List<String>): Int = withContext(Dispatchers.IO) {
         val builtIn = readBuiltInRules()
-        val remote = coroutineScope {
-            urls.map { url ->
-                async(Dispatchers.IO) { parser.downloadAndParseRules(url) }
-            }.awaitAll()
-        }
-
-        val blocked = LinkedHashSet<String>(Constants.MAX_BLOCKLIST_ENTRIES)
-        val allowed = LinkedHashSet<String>(Constants.MAX_ALLOWLIST_ENTRIES)
-
+        val blocked = LinkedHashSet<String>()
+        val allowed = LinkedHashSet<String>()
         builtIn.blocked.forEach { rule -> if (blocked.size < Constants.MAX_BLOCKLIST_ENTRIES) blocked += rule }
         builtIn.allowed.forEach { rule -> if (allowed.size < Constants.MAX_ALLOWLIST_ENTRIES) allowed += rule }
-        remote.forEach { parsed ->
-            parsed.blocked.forEach { rule ->
-                if (blocked.size < Constants.MAX_BLOCKLIST_ENTRIES) blocked += rule
-            }
-            parsed.allowed.forEach { rule ->
-                if (allowed.size < Constants.MAX_ALLOWLIST_ENTRIES) allowed += rule
-            }
+
+        var downloadedAny = false
+        for (url in urls) {
+            val remaining = Constants.MAX_BLOCKLIST_ENTRIES - blocked.size
+            if (remaining <= 0) break
+            val parsed = parser.downloadAndParseRules(url, remaining + Constants.MAX_ALLOWLIST_ENTRIES)
+            if (parsed.total > 0) downloadedAny = true
+            parsed.blocked.forEach { if (blocked.size < Constants.MAX_BLOCKLIST_ENTRIES) blocked += it }
+            parsed.allowed.forEach { if (allowed.size < Constants.MAX_ALLOWLIST_ENTRIES) allowed += it }
         }
-        if (blocked.isEmpty()) return@withContext 0
+        if (!downloadedAny) {
+            Logger.w("All blocklist downloads failed or were empty; keeping the existing rules")
+            return@withContext 0
+        }
 
         val allowedKeys = allowed.mapNotNull { DomainValidator.normalize(it)?.domain }.toHashSet()
         val downloaded = LinkedHashMap<String, BlocklistEntry>(blocked.size + allowed.size + 256)
@@ -171,21 +172,22 @@ class BlocklistManager(
             )
         }
 
-        // User rules are applied last so they override downloaded exceptions,
-        // downloaded blocks and the built-in essential allowlist.
-        val finalEntries = LinkedHashMap<String, BlocklistEntry>(downloaded.size + 256)
-        finalEntries.putAll(downloaded)
-        dao.getUserEntriesSync().forEach { entry -> finalEntries[entry.domain] = entry }
-
+        // Existing user entries are never deleted. The DAO uses IGNORE on conflicts,
+        // so user rules win without building a second 500K-entry map in memory.
         database.withTransaction {
             dao.deleteNonUserEntries()
-            chunkedInsert(finalEntries.values.filter { !it.isUserAdded })
+            chunkedInsert(downloaded.values.toList())
         }
 
+        // Release intermediate collections before rebuilding the live index.
+        blocked.clear()
+        allowed.clear()
+        downloaded.clear()
         loadFromDatabase()
         preferences.lastBlocklistUpdate = System.currentTimeMillis()
-        Logger.i("Updated blocklist with ${finalEntries.size} entries")
-        finalEntries.size
+        val count = dao.getCountSync()
+        Logger.i("Updated blocklist with $count entries")
+        count
     }
 
     suspend fun getShieldDomains(limit: Int = 800): List<String> = withContext(Dispatchers.IO) {

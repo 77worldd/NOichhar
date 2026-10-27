@@ -27,6 +27,9 @@ interface BlocklistDao {
     @Query("SELECT COUNT(*) FROM blocklist")
     suspend fun getCountSync(): Int
 
+    @Query("SELECT COUNT(*) FROM blocklist WHERE source NOT IN ('allow', 'essential', 'allow-user')")
+    fun getBlockRuleCount(): LiveData<Int>
+
     @Query("SELECT EXISTS(SELECT 1 FROM blocklist WHERE domain = :domain)")
     suspend fun isDomainBlocked(domain: String): Boolean
 

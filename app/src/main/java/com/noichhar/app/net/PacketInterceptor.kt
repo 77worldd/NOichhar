@@ -2,7 +2,7 @@ package com.noichhar.app.net
 
 import android.content.Context
 import android.os.ParcelFileDescriptor
-import com.noichhar.app.blocker.DomainBlocker
+import com.noichhar.app.blocker.EnhancedBlocklistEngine
 import com.noichhar.app.dns.DnsCache
 import com.noichhar.app.dns.DnsPacketParser
 import com.noichhar.app.dns.DnsResolver
@@ -42,7 +42,7 @@ data class DnsQueryEvent(
 class PacketInterceptor(
     private val context: Context,
     private val vpnFileDescriptor: ParcelFileDescriptor,
-    private val domainBlocker: DomainBlocker,
+    private val domainBlocker: EnhancedBlocklistEngine,
     private val dnsCache: DnsCache,
     private val preferenceManager: PreferenceManager,
     private val firewallManager: FirewallManager,
@@ -163,7 +163,7 @@ class PacketInterceptor(
         var blockReason = firewallDecision.reason
         var response: ByteArray = if (blocked) {
             DnsPacketParser.createNxDomainResponse(dnsPayload)
-        } else if (domainBlocker.isBlocked(domain)) {
+        } else if (preferenceManager.protectionMode.domainFiltering && domainBlocker.isBlocked(domain)) {
             blocked = true
             blockReason = domainBlocker.getBlockReason(domain) ?: "Blocklist rule"
             DnsPacketParser.createNxDomainResponse(dnsPayload)
@@ -177,7 +177,8 @@ class PacketInterceptor(
                     DnsPacketParser.createServFailResponse(dnsPayload)
                 } else {
                     val blockedAlias = DnsPacketParser.parseAnswerNames(upstream)
-                        .firstOrNull { alias -> alias != domain.lowercase() && domainBlocker.isBlocked(alias) }
+                        .firstOrNull { alias -> preferenceManager.protectionMode.domainFiltering &&
+                            alias != domain.lowercase() && domainBlocker.isBlocked(alias) }
                     if (blockedAlias != null) {
                         blocked = true
                         blockReason = "Blocked upstream alias: $blockedAlias"

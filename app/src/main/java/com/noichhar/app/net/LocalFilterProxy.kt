@@ -1,7 +1,7 @@
 package com.noichhar.app.net
 
 import android.content.Context
-import com.noichhar.app.blocker.DomainBlocker
+import com.noichhar.app.blocker.EnhancedBlocklistEngine
 import com.noichhar.app.service.FirewallManager
 import com.noichhar.app.util.Constants
 import com.noichhar.app.util.DomainValidator
@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class LocalFilterProxy(
     private val context: Context,
-    private val domainBlocker: DomainBlocker,
+    private val domainBlocker: EnhancedBlocklistEngine,
     private val firewallManager: FirewallManager,
     private val uidResolver: UidResolver,
     private val protectSocket: (Socket) -> Boolean,
@@ -211,7 +211,8 @@ class LocalFilterProxy(
 
     private suspend fun shouldBlock(client: Socket, host: String, queryType: String): Boolean {
         val normalized = DomainValidator.normalize(host)
-        val domainBlocked = normalized != null && domainBlocker.isBlocked(normalized.domain)
+        val domainBlocked = com.noichhar.app.NOichharApp.instance.preferenceManager.protectionMode.domainFiltering &&
+            normalized != null && domainBlocker.isBlocked(normalized.domain)
         val uid = uidResolver.resolveTcpUid(
             sourcePort = client.port,
             localAddress = client.inetAddress,

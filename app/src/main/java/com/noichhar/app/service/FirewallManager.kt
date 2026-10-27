@@ -45,6 +45,7 @@ class FirewallManager(private val context: Context) {
     }
 
     suspend fun evaluateDns(uid: Int, screenInteractive: Boolean): FirewallDecision = withContext(Dispatchers.IO) {
+        if (!preferences.protectionMode.appRules) return@withContext FirewallDecision(true)
         val app = if (uid >= 0) appInfoDao.getAppByUid(uid) else null
         if (app?.packageName == appContext.packageName) {
             return@withContext FirewallDecision(true)

@@ -58,6 +58,7 @@ class NOichharVpnService : VpnService() {
     private var activeBlockedIps: Set<String> = emptySet()
 
     companion object {
+        private val counterLock = Any()
         var instance: NOichharVpnService? = null
             private set
 
@@ -135,6 +136,7 @@ class NOichharVpnService : VpnService() {
                     NOichharApp.instance.preferenceManager.vpnEnabled = true
                     startPacketInterceptor(descriptor)
                     startNetworkMonitor()
+                    NOichharApp.instance.trafficTracker.start()
                     refreshNotification()
                     broadcastVpnState(true)
                     Logger.i("VPN started with ${activeBlockedIps.size} shielded IP routes")
@@ -244,15 +246,18 @@ class NOichharVpnService : VpnService() {
     }
 
     private suspend fun loadCounters() {
-        val dao = NOichharApp.instance.database.dnsLogDao()
-        blockedCount = dao.getBlockedCountSync()
-        allowedCount = dao.getAllowedCountSync()
-        totalCount = dao.getTotalCountSync()
+        val activity = NOichharApp.instance.database.trafficStatDao().activitySince(0L)
+        blockedCount = activity.blocked
+        allowedCount = activity.allowed
+        totalCount = activity.blocked + activity.allowed
     }
 
     private suspend fun onDnsQuery(event: DnsQueryEvent) {
-        if (event.isBlocked) blockedCount++ else allowedCount++
-        totalCount++
+        NOichharApp.instance.trafficTracker.recordQuery(event)
+        synchronized(counterLock) {
+            if (event.isBlocked) blockedCount++ else allowedCount++
+            totalCount++
+        }
 
         if (totalCount % Constants.LOG_PRUNE_INTERVAL == 0L) refreshNotification()
 
@@ -337,6 +342,7 @@ class NOichharVpnService : VpnService() {
 
         packetInterceptor?.stop()
         packetInterceptor = null
+        NOichharApp.instance.trafficTracker.stop()
         networkMonitor?.stop()
         networkMonitor = null
         localFilterProxy?.stop()

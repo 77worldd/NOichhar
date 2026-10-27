@@ -16,6 +16,7 @@ import com.noichhar.app.blocker.BlocklistManager
 import com.noichhar.app.blocker.BlocklistUpdateWorker
 import com.noichhar.app.database.NOichharDatabase
 import com.noichhar.app.service.FirewallManager
+import com.noichhar.app.stats.TrafficTracker
 import com.noichhar.app.util.Constants
 import com.noichhar.app.util.Logger
 import com.noichhar.app.util.PreferenceManager
@@ -34,6 +35,9 @@ class NOichharApp : Application() {
     lateinit var blocklistManager: BlocklistManager
         private set
 
+    lateinit var trafficTracker: TrafficTracker
+        private set
+
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
@@ -42,10 +46,10 @@ class NOichharApp : Application() {
         database = NOichharDatabase.getInstance(this)
         preferenceManager = PreferenceManager(this)
         AppCompatDelegate.setDefaultNightMode(
-            if (preferenceManager.darkMode) AppCompatDelegate.MODE_NIGHT_YES
-            else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            AppCompatDelegate.MODE_NIGHT_YES
         )
         blocklistManager = BlocklistManager(this, database)
+        trafficTracker = TrafficTracker(this)
         createNotificationChannel()
         scheduleBlocklistUpdates()
 

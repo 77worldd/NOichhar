@@ -30,12 +30,12 @@ class NetworkShield(
     private var domainsByIp: Map<String, String> = emptyMap()
 
     fun blockedIps(): Set<String> =
-        if (preferences.advancedProtection) preferences.networkShieldIps else emptySet()
+        if (preferences.advancedProtection && preferences.protectionMode.domainFiltering) preferences.networkShieldIps else emptySet()
 
     fun domainFor(ip: String): String? = domainsByIp[ip]
 
     suspend fun refreshIfStale(force: Boolean = false): Set<String> = withContext(Dispatchers.IO) {
-        if (!preferences.advancedProtection) return@withContext emptySet()
+        if (!preferences.advancedProtection || !preferences.protectionMode.domainFiltering) return@withContext emptySet()
 
         val cached = preferences.networkShieldIps
         val lastUpdated = preferences.networkShieldUpdated

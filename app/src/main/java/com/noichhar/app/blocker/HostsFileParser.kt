@@ -36,7 +36,7 @@ class HostsFileParser {
 
     fun downloadAndParse(url: String): List<String> = downloadAndParseRules(url).blocked.toList()
 
-    fun downloadAndParseRules(url: String): ParsedRules {
+    fun downloadAndParseRules(url: String, limit: Int = com.noichhar.app.util.Constants.MAX_BLOCKLIST_ENTRIES): ParsedRules {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", "NOichhar/2.0 blocklist-updater")
@@ -48,7 +48,7 @@ class HostsFileParser {
                     return ParsedRules()
                 }
                 val stream = response.body?.byteStream() ?: return ParsedRules()
-                stream.use { parse(it) }
+                stream.use { parse(it, limit) }
             }
         } catch (e: Exception) {
             Logger.e("Blocklist download failed: $url - ${e.message}")
@@ -66,10 +66,13 @@ class HostsFileParser {
         return result
     }
 
-    fun parse(stream: InputStream): ParsedRules {
+    fun parse(stream: InputStream, limit: Int = com.noichhar.app.util.Constants.MAX_BLOCKLIST_ENTRIES): ParsedRules {
         val result = ParsedRules()
         BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).use { reader ->
-            reader.forEachLine { line -> parseLine(line, result) }
+            while (result.total < limit) {
+                val line = reader.readLine() ?: break
+                parseLine(line, result)
+            }
         }
         return result
     }
