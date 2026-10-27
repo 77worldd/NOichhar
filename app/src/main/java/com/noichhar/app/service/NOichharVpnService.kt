@@ -230,7 +230,10 @@ class NOichharVpnService : VpnService() {
             }.onFailure { Logger.e("Could not enable hostname-aware app filtering", it) }
         }
 
-        runCatching { builder.addDisallowedApplication(packageName) }
+        // The resolver and proxy must use the underlying network rather than
+        // recursively routing the VPN app's own upstream sockets into its TUN.
+        // If this fails, do not establish a broken, self-looping VPN.
+        builder.addDisallowedApplication(packageName)
         builder.establish()
     } catch (e: Exception) {
         Logger.e("Failed to establish VPN", e)

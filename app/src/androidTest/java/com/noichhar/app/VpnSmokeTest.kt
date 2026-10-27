@@ -15,20 +15,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
-import com.noichhar.app.dns.DnsPacketParser
 import com.noichhar.app.service.NOichharVpnService
 import com.noichhar.app.ui.activity.MainActivity
 import com.noichhar.app.util.Constants
 import kotlinx.coroutines.runBlocking
-import java.io.ByteArrayOutputStream
-import java.io.DataInputStream
-import java.io.DataOutputStream
-import java.net.DatagramPacket
-import java.net.DatagramSocket
-import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.net.Socket
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -66,25 +56,17 @@ class VpnSmokeTest {
                 val domain = "arena-smoke.noichhar.invalid"
                 runBlocking { assertTrue(app.blocklistManager.addCustomDomain(domain)) }
                 try {
-                    val query = dnsQuery(domain)
-                    val address = InetAddress.getByName(Constants.VPN_DNS_ADDRESS)
-                    DatagramSocket().use { socket ->
-                        socket.soTimeout = 8_000
-                        socket.send(DatagramPacket(query, query.size, address, Constants.DNS_PORT))
-                        val packet = DatagramPacket(ByteArray(512), 512)
-                        socket.receive(packet)
-                        assertBlocked(packet.data.copyOf(packet.length))
+                    // Instrumentation runs in the VPN app's own UID, which the
+                    // service excludes to keep its upstream sockets off the VPN.
+                    // app_process starts this helper as the separate shell UID.
+                    val apk = instrumentation.context.packageCodePath
+                    val command = "CLASSPATH='$apk' app_process /system/bin " +
+                        "com.noichhar.app.DnsProbe ${Constants.VPN_DNS_ADDRESS} $domain 2>&1"
+                    val output = instrumentation.uiAutomation.executeShellCommand(command).let { fd ->
+                        ParcelFileDescriptor.AutoCloseInputStream(fd).bufferedReader().use { it.readText() }
                     }
-                    Socket().use { socket ->
-                        socket.connect(InetSocketAddress(address, Constants.DNS_PORT), 8_000)
-                        socket.soTimeout = 8_000
-                        val out = DataOutputStream(socket.getOutputStream())
-                        out.writeShort(query.size); out.write(query); out.flush()
-                        val input = DataInputStream(socket.getInputStream())
-                        val response = ByteArray(input.readUnsignedShort())
-                        input.readFully(response)
-                        assertBlocked(response)
-                    }
+                    assertTrue("UDP probe failed: $output", output.contains("UDP_BLOCKED_OK"))
+                    assertTrue("TCP probe failed: $output", output.contains("TCP_BLOCKED_OK"))
                 } finally {
                     runBlocking { app.blocklistManager.removeDomain(domain) }
                 }
@@ -98,25 +80,5 @@ class VpnSmokeTest {
             NOichharVpnService.instance?.stopVpn()
             app.preferenceManager.protectionMode = originalMode
         }
-    }
-
-    private fun dnsQuery(domain: String): ByteArray {
-        val bytes = ByteArrayOutputStream()
-        val out = DataOutputStream(bytes)
-        out.writeShort(0xCAFE); out.writeShort(0x0100); out.writeShort(1)
-        out.writeShort(0); out.writeShort(0); out.writeShort(0)
-        domain.split('.').forEach { label ->
-            val encoded = label.toByteArray(Charsets.US_ASCII)
-            out.writeByte(encoded.size); out.write(encoded)
-        }
-        out.writeByte(0); out.writeShort(1); out.writeShort(1)
-        return bytes.toByteArray()
-    }
-
-    private fun assertBlocked(response: ByteArray) {
-        val header = requireNotNull(DnsPacketParser.parseHeader(response))
-        assertEquals(0xCAFE, header.id)
-        assertEquals(0x8000, header.flags and 0x8000) // response, not query
-        assertEquals(3, header.flags and 0x000F) // NXDOMAIN
     }
 }
