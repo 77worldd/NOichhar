@@ -82,7 +82,7 @@ class HomeFragment : Fragment() {
         binding.shield.setActive(active)
         binding.shield.contentDescription = if (active) "Protection active. Tap to stop." else "Protection inactive. Tap to start."
         binding.tvStatusBadge.text = if (active) "PROTECTED" else "INACTIVE"
-        binding.tvStatusBadge.setTextColor(ContextCompat.getColor(requireContext(), if (active) R.color.accent_mint else R.color.text_secondary))
+        binding.tvStatusBadge.setTextColor(ContextCompat.getColor(requireContext(), if (active) R.color.text_primary else R.color.text_secondary))
         binding.tvHeroSubtitle.text = if (active) "Filtering requests on this device" else "Tap to activate protection"
         binding.btnToggle.text = if (active) "STOP" else "ACTIVATE"
         binding.tvTimestamp.text = if (active) "live" else "offline"

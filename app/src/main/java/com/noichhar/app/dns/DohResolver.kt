@@ -1,18 +1,25 @@
 package com.noichhar.app.dns
 
 import com.noichhar.app.util.Logger
+import okhttp3.ConnectionPool
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
+/**
+ * Performance-optimized DoH resolver with connection pooling and keep-alive.
+ * Reuses a single OkHttpClient to avoid TLS handshake overhead on every query.
+ */
 class DohResolver {
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
         .readTimeout(5, TimeUnit.SECONDS)
         .writeTimeout(5, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
+        .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
         .retryOnConnectionFailure(true)
         .build()
 
@@ -23,6 +30,7 @@ class DohResolver {
             .post(query.toRequestBody(mediaType))
             .header("Accept", "application/dns-message")
             .header("Content-Type", "application/dns-message")
+            .header("Connection", "keep-alive")
             .build()
 
         client.newCall(request).execute().use { response ->

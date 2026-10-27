@@ -24,7 +24,7 @@
             android:id="@+id/tv_bytes"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/text_white"
+            android:textColor="@color/text_primary"
             android:textSize="14sp"
             app:fontFamily="@font/inter_bold" />
     </LinearLayout>
@@ -35,7 +35,7 @@
         android:layout_width="match_parent"
         android:layout_height="3dp"
         android:layout_marginTop="6dp"
-        android:progressTint="@color/accent_mint"
+        android:progressTint="@color/text_tertiary"
         android:progressBackgroundTint="@color/obsidian_600"
         android:max="100"
         android:progress="0" />

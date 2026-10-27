@@ -40,7 +40,7 @@ class SegmentedTimeSelector @JvmOverloads constructor(context: Context, attrs: A
     private fun updateVisuals() = labels.forEach { (window, view) ->
         view.isSelected = window == selected
         view.background = if (view.isSelected) ContextCompat.getDrawable(context, R.drawable.bg_segmented_pill_active) else null
-        view.setTextColor(ContextCompat.getColor(context, if (view.isSelected) R.color.text_white else R.color.text_secondary))
+        view.setTextColor(ContextCompat.getColor(context, if (view.isSelected) R.color.button_primary_text else R.color.text_secondary))
         view.contentDescription = "${window.label}${if (view.isSelected) ", selected" else ""}"
     }
 }

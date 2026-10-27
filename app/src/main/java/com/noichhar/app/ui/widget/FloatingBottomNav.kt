@@ -42,7 +42,7 @@ class FloatingBottomNav @JvmOverloads constructor(context: Context, attrs: Attri
             val chosen = i == selected
             cell.isSelected = chosen
             cell.background = if (chosen) ContextCompat.getDrawable(context, R.drawable.bg_segmented_pill_active) else null
-            val color = ContextCompat.getColor(context, if (chosen) R.color.text_white else R.color.text_secondary)
+            val color = ContextCompat.getColor(context, if (chosen) R.color.nav_selected else R.color.nav_unselected)
             cell.findViewById<ImageView>(iconIds[i]).setColorFilter(color)
             cell.findViewById<TextView>(labelIds[i]).setTextColor(color)
             cell.contentDescription = "${labels[i]}${if (chosen) ", selected" else ""}"

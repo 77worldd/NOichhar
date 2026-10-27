@@ -27,7 +27,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Network Analytics"
-            android:textColor="@color/text_white"
+            android:textColor="@color/text_primary"
             android:textSize="28sp"
             android:letterSpacing="-0.02"
             app:fontFamily="@font/inter_bold"
@@ -46,7 +46,7 @@
             android:textColor="@color/text_secondary" android:textSize="13sp" />
         <TextView android:id="@+id/btn_usage_access" android:layout_width="match_parent"
             android:layout_height="48dp" android:layout_marginTop="8dp" android:gravity="center"
-            android:text="Grant Usage Access" android:textColor="@color/text_white"
+            android:text="Grant Usage Access" android:textColor="@color/text_primary"
             android:background="@drawable/bg_action_outline" android:clickable="true" android:focusable="true" />
 
         <!-- Bandwidth totals -->
@@ -71,7 +71,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="—"
-                        android:textColor="@color/text_white"
+                        android:textColor="@color/text_primary"
                         android:textSize="22sp"
                         app:fontFamily="@font/inter_bold" />
                     <TextView
@@ -100,7 +100,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="—"
-                        android:textColor="@color/text_white"
+                        android:textColor="@color/text_primary"
                         android:textSize="22sp"
                         app:fontFamily="@font/inter_bold" />
                     <TextView
@@ -129,7 +129,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="—"
-                        android:textColor="@color/accent_violet_bright"
+                        android:textColor="@color/text_primary"
                         android:textSize="22sp"
                         app:fontFamily="@font/inter_bold" />
                     <TextView
@@ -167,7 +167,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Filtered Requests by App"
-                        android:textColor="@color/text_white"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp"
                         app:fontFamily="@font/inter_semibold" />
 
@@ -176,7 +176,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Clear DNS Cache"
-                        android:textColor="@color/accent_coral"
+                        android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         app:fontFamily="@font/inter_semibold"
                         android:paddingStart="14dp" android:paddingEnd="14dp"
@@ -227,7 +227,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="App Bandwidth"
-                    android:textColor="@color/text_white"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     app:fontFamily="@font/inter_semibold" />
 

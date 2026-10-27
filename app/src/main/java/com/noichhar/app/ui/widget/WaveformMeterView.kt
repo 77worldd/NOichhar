@@ -15,8 +15,8 @@ import kotlin.math.sin
 /** Decorative wave amplitude is driven only by measured device-wide byte rates. */
 class WaveformMeterView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null,
     defStyleAttr: Int = 0) : View(context, attrs, defStyleAttr) {
-    private val upPaint = paint(R.color.accent_mint)
-    private val downPaint = paint(R.color.accent_cyan)
+    private val upPaint = paint(R.color.chart_upload)
+    private val downPaint = paint(R.color.chart_download)
     private var up = 0f; private var down = 0f; private var phase = 0f
     private var active = false; private var animator: ValueAnimator? = null
     private fun paint(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
