@@ -78,6 +78,9 @@
     </style>
 
     <!-- Typography System -->
+    <style name="TextStyle">
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
     <style name="TextStyle.PageTitle">
         <item name="android:textSize">28sp</item>
         <item name="android:textColor">@color/text_primary</item>
@@ -135,7 +138,7 @@
     <!-- Legacy aliases -->
     <style name="StatNumber">
         <item name="android:textSize">40sp</item>
-        <item name="android:fontFamily">@font/inter_light</item>
+        <item name="android:fontFamily">sans-serif-light</item>
         <item name="android:textColor">@color/text_primary</item>
         <item name="android:includeFontPadding">false</item>
         <item name="android:letterSpacing">-0.03</item>
