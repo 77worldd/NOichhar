@@ -9,6 +9,10 @@ interface ConnectionLogDao {
     @Insert
     suspend fun insert(log: ConnectionLog)
 
+    /** One transaction for a whole batch; used by the power-efficient log writer. */
+    @Insert
+    suspend fun insertAll(logs: List<ConnectionLog>)
+
     @Query("SELECT * FROM connection_log ORDER BY timestamp DESC LIMIT 500")
     fun getRecentConnections(): LiveData<List<ConnectionLog>>
 

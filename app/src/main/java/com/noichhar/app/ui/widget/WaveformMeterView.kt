@@ -19,6 +19,9 @@ class WaveformMeterView @JvmOverloads constructor(context: Context, attrs: Attri
     private val downPaint = paint(R.color.chart_download)
     private var up = 0f; private var down = 0f; private var phase = 0f
     private var active = false; private var animator: ValueAnimator? = null
+    // Reused between frames; allocating a Path for every draw churned the GC while
+    // traffic was flowing.
+    private val wavePath = Path()
     private fun paint(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeWidth = 2f * resources.displayMetrics.density
         strokeCap = Paint.Cap.ROUND; this.color = ContextCompat.getColor(context, color)
@@ -33,9 +36,18 @@ class WaveformMeterView @JvmOverloads constructor(context: Context, attrs: Attri
     }
     override fun onAttachedToWindow() { super.onAttachedToWindow(); updateAnimation() }
     override fun onDetachedFromWindow() { animator?.cancel(); animator = null; super.onDetachedFromWindow() }
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        updateAnimation()
+    }
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        updateAnimation()
+    }
     private fun updateAnimation() {
         animator?.cancel(); animator = null
-        if (!active || !isAttachedToWindow) return
+        val visible = isAttachedToWindow && isShown && windowVisibility == VISIBLE
+        if (!active || !visible) return
         animator = ValueAnimator.ofFloat(0f, (Math.PI * 2).toFloat()).apply {
             duration = 2400; repeatCount = ValueAnimator.INFINITE
             addUpdateListener { phase = it.animatedValue as Float; invalidate() }; start()
@@ -47,7 +59,8 @@ class WaveformMeterView @JvmOverloads constructor(context: Context, attrs: Attri
         drawWave(canvas, down, downPaint, 0f); drawWave(canvas, up, upPaint, Math.PI.toFloat())
     }
     private fun drawWave(canvas: Canvas, amplitude: Float, paint: Paint, offset: Float) {
-        val path = Path(); val mid = height / 2f
+        val path = wavePath.apply { reset() }
+        val mid = height / 2f
         path.moveTo(0f, mid)
         var x = 0f
         while (x <= width) {

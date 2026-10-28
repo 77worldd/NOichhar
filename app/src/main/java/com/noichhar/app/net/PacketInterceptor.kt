@@ -82,13 +82,23 @@ class PacketInterceptor(
         val buffer = ByteArray(Constants.VPN_MTU)
         // Performance: avoid allocations in hot loop, forward allowed DNS immediately
 
+        // A closed tunnel used to spin here once per millisecond, burning a core until
+        // the service was stopped. Count empty reads and back off instead.
+        var emptyReads = 0
+
         while (running && scope.isActive) {
             try {
                 val length = inputStream.read(buffer)
                 if (length <= 0) {
-                    delay(1)
+                    emptyReads++
+                    if (emptyReads > EMPTY_READ_LIMIT) {
+                        Logger.w("VPN input closed; stopping packet processing")
+                        break
+                    }
+                    delay(if (emptyReads < 10) 20L else 250L)
                     continue
                 }
+                emptyReads = 0
                 packetCounter++
                 if (packetCounter % 512L == 0L) pruneTcpSessions()
 
@@ -349,6 +359,8 @@ class PacketInterceptor(
     }
 
     private companion object {
+        /** Consecutive zero-length reads before the stream is treated as closed. */
+        const val EMPTY_READ_LIMIT = 50
         const val MAX_TCP_SESSIONS = 1024
     }
 }

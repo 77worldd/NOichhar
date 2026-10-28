@@ -85,6 +85,14 @@ class StatsFragment : Fragment() {
         }
     }
     override fun onResume() { super.onResume(); renderCoverage(); vm.refresh() }
+    override fun onStart() {
+        super.onStart()
+        NOichharApp.instance.trafficTracker.onUiVisible()
+    }
+    override fun onStop() {
+        NOichharApp.instance.trafficTracker.onUiHidden()
+        super.onStop()
+    }
     private fun renderCoverage() {
         if (_binding == null) return
         val tracker = NOichharApp.instance.trafficTracker

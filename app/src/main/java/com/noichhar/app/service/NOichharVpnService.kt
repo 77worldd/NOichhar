@@ -11,6 +11,7 @@ import android.os.ParcelFileDescriptor
 import com.noichhar.app.NOichharApp
 import com.noichhar.app.R
 import com.noichhar.app.blocker.BlocklistManager
+import com.noichhar.app.database.entity.ConnectionLog
 import com.noichhar.app.database.entity.DnsLog
 import com.noichhar.app.dns.DnsCache
 import com.noichhar.app.net.DnsQueryEvent
@@ -41,13 +42,14 @@ class NOichharVpnService : VpnService() {
     private lateinit var blocklistManager: BlocklistManager
     private lateinit var firewallManager: FirewallManager
     private lateinit var networkShield: NetworkShield
-    private val connectionTracker = ConnectionTracker()
     private val dnsCache = DnsCache()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val vpnMutex = Mutex()
     private val stateLock = Any()
     private var lifecycleGeneration = 0L
     @Volatile private var starting = false
+    @Volatile private var lastNotificationAt = 0L
+    @Volatile private var lastPruneAt = 0L
 
     @Volatile
     private var isRunning = false
@@ -177,6 +179,7 @@ class NOichharVpnService : VpnService() {
                         startPacketInterceptor(descriptor)
                         startNetworkMonitor()
                         NOichharApp.instance.trafficTracker.start()
+                        NOichharApp.instance.queryLogWriter.start()
                         NOichharApp.instance.preferenceManager.vpnEnabled = true
                         isRunning = true
                         starting = false
@@ -331,53 +334,61 @@ class NOichharVpnService : VpnService() {
     }
 
     private suspend fun onDnsQuery(event: DnsQueryEvent) {
-        NOichharApp.instance.trafficTracker.recordQuery(event)
+        val app = NOichharApp.instance
+        app.trafficTracker.recordQuery(event)
         synchronized(counterLock) {
             if (event.isBlocked) blockedCount++ else allowedCount++
             totalCount++
         }
 
-        if (totalCount % Constants.LOG_PRUNE_INTERVAL == 0L) refreshNotification()
+        // Battery: notifications and log pruning used to fire every 50 queries. Both
+        // are now wall-clock throttled, so heavy browsing no longer causes a stream
+        // of binder calls and delete statements.
+        val now = System.currentTimeMillis()
+        if (now - lastNotificationAt >= Constants.NOTIFICATION_MIN_INTERVAL_MS) {
+            lastNotificationAt = now
+            refreshNotification()
+        }
 
-        if (!NOichharApp.instance.preferenceManager.enableLogs) return
-        // Performance: DNS logging uses batched pruning (every 50 queries) to avoid frequent DB churn
+        if (!app.preferenceManager.enableLogs) return
 
-        val database = NOichharApp.instance.database
-        runCatching {
-            database.dnsLogDao().insert(
-                DnsLog(
-                    domain = event.domain,
-                    queryType = event.queryType,
-                    responseIp = event.responseIp,
-                    isBlocked = event.isBlocked,
-                    blockReason = event.blockReason,
-                    responseTimeMs = event.responseTimeMs,
-                    timestamp = System.currentTimeMillis(),
-                    appUid = event.appUid.takeIf { it >= 0 },
-                    appName = event.appName.takeIf { it.isNotBlank() }
-                )
+        val destinationPort = when (event.queryType) {
+            "HTTP" -> Constants.HTTP_PORT
+            "HTTPS" -> Constants.HTTPS_PORT
+            "IP" -> 0
+            else -> Constants.DNS_PORT
+        }
+        val timestamp = System.currentTimeMillis()
+
+        app.queryLogWriter.recordDns(
+            DnsLog(
+                domain = event.domain,
+                queryType = event.queryType,
+                responseIp = event.responseIp,
+                isBlocked = event.isBlocked,
+                blockReason = event.blockReason,
+                responseTimeMs = event.responseTimeMs,
+                timestamp = timestamp,
+                appUid = event.appUid.takeIf { it >= 0 },
+                appName = event.appName.takeIf { it.isNotBlank() }
             )
-
-            val destinationPort = when (event.queryType) {
-                "HTTP" -> Constants.HTTP_PORT
-                "HTTPS" -> Constants.HTTPS_PORT
-                "IP" -> 0
-                else -> Constants.DNS_PORT
-            }
-            connectionTracker.logConnection(
+        )
+        app.queryLogWriter.recordConnection(
+            ConnectionLog(
                 appUid = event.appUid,
                 appName = event.appName,
                 destinationIp = event.domain,
                 destinationPort = destinationPort,
                 protocol = if (event.isBlocked) "BLOCKED" else "ALLOWED",
-                isBlocked = event.isBlocked
+                isBlocked = event.isBlocked,
+                timestamp = timestamp
             )
+        )
 
-            if (totalCount % Constants.LOG_PRUNE_INTERVAL == 0L) {
-                val cutoff = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
-                database.dnsLogDao().deleteOlderThan(cutoff)
-            }
-        }.onFailure { Logger.e("Failed to log DNS query", it) }
+        if (now - lastPruneAt >= Constants.LOG_PRUNE_INTERVAL_MS) {
+            lastPruneAt = now
+            scope.launch { app.queryLogWriter.prune() }
+        }
     }
 
     fun reloadConfiguration(forceShieldRefresh: Boolean = false) {
@@ -443,6 +454,7 @@ class NOichharVpnService : VpnService() {
         packetInterceptor?.stop()
         packetInterceptor = null
         NOichharApp.instance.trafficTracker.stop()
+        NOichharApp.instance.queryLogWriter.stop()
         networkMonitor?.stop()
         networkMonitor = null
         localFilterProxy?.stop()

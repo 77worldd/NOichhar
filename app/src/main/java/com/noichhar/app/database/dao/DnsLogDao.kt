@@ -9,6 +9,10 @@ interface DnsLogDao {
     @Insert
     suspend fun insert(log: DnsLog)
 
+    /** One transaction for a whole batch; used by the power-efficient log writer. */
+    @Insert
+    suspend fun insertAll(logs: List<DnsLog>)
+
     @Query("SELECT * FROM dns_log ORDER BY timestamp DESC LIMIT 1000")
     fun getRecentLogs(): LiveData<List<DnsLog>>
 

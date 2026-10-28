@@ -1,6 +1,18 @@
-# NOichhar v2.2.1 — Monochrome + Instant Activation
+# NOichhar v2.2.2 — Battery & Idle Efficiency
 
-A black & white redesign with a faster, fully responsive protection toggle. The package remains `com.noichhar.app`; no root is required.
+Lower power use while protection is on, plus everything from v2.2.1 and v2.2.0. The package remains `com.noichhar.app`; no root is required.
+
+## Battery work in v2.2.2
+
+- **Batched logging.** Every resolved query used to open two separate database transactions. Rows are now queued in memory and written in one batch every two seconds (or when 120 rows are waiting), so browsing no longer causes a stream of flash writes and CPU wake-ups.
+- **Sampling only when a screen is visible.** Live throughput reads and per-app usage snapshots were polling every 2 seconds even with the screen off. With no screen in front, byte-rate reads stop, the tick drops to 30 seconds and per-app snapshots fall back to five minutes, so an overnight session costs almost nothing.
+- **Throttled notification updates.** The ongoing notification is refreshed at most every 15 seconds instead of every 50 queries.
+- **Log pruning by time.** Cleanup runs every ten minutes instead of after every few dozen queries.
+- **Cheaper UID lookups.** On Android 7–9 the fallback parses `/proc/net/*` for each packet; the parsed table is now cached for a second with a single forced refresh on a miss.
+- **No busy-wait on a closed tunnel.** A closed VPN descriptor previously spun once per millisecond; reads now back off and stop cleanly.
+- **Lighter drawing.** The shield glow shader and waveform path are reused instead of allocated every frame, and both animations stop when the screen is off or the view is hidden.
+
+Tip: turning off **Detailed logs** in Configure keeps only counters and charts, which removes nearly all remaining storage work.
 
 ## What's new in v2.2.1
 
@@ -26,7 +38,7 @@ A black & white redesign with a faster, fully responsive protection toggle. The 
 
 ## Installation and usage
 
-Install the signed `NOichhar-v2.2.1.apk` over a compatible v2 release, open the app and accept the VPN prompt once. Grant **Usage Access** from the Stats or Configure screen for optional per-app bandwidth. Android may delay or deny some mobile usage data; the app labels unavailable data rather than inventing values.
+Install the signed `NOichhar-v2.2.2.apk` over a compatible v2 release, open the app and accept the VPN prompt once. Grant **Usage Access** from the Stats or Configure screen for optional per-app bandwidth. Android may delay or deny some mobile usage data; the app labels unavailable data rather than inventing values.
 
 ## Important limitations
 
