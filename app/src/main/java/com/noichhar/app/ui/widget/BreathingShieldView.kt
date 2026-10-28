@@ -23,6 +23,11 @@ class BreathingShieldView @JvmOverloads constructor(context: Context, attrs: Att
     private var phase = 0f
     private var animator: ValueAnimator? = null
 
+    // The radial glow used to be rebuilt on every animation frame, which allocated a
+    // new Shader ~60 times a second. It only depends on the view size, so keep it.
+    private var glowShader: RadialGradient? = null
+    private var glowRadius = 0f
+
     fun setActive(value: Boolean) {
         if (active == value) return
         active = value
@@ -41,9 +46,26 @@ class BreathingShieldView @JvmOverloads constructor(context: Context, attrs: Att
     override fun onAttachedToWindow() { super.onAttachedToWindow(); updateAnimation() }
     override fun onDetachedFromWindow() { animator?.cancel(); animator = null; super.onDetachedFromWindow() }
 
+    // Stop painting when the screen is off or another tab/window covers this view.
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        updateAnimation()
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        updateAnimation()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        glowShader = null
+    }
+
     private fun updateAnimation() {
         animator?.cancel(); animator = null
-        if ((!active && !connecting) || !isAttachedToWindow) { phase = 0f; return }
+        val visible = isAttachedToWindow && isShown && windowVisibility == VISIBLE
+        if ((!active && !connecting) || !visible) { phase = 0f; return }
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = if (active) 2800L else 1200L
             interpolator = LinearInterpolator()
@@ -59,7 +81,12 @@ class BreathingShieldView @JvmOverloads constructor(context: Context, attrs: Att
         val r = minOf(width, height) * 0.25f
         val color = ContextCompat.getColor(context, if (active || connecting) R.color.text_primary else R.color.text_dim)
         if (active) {
-            glow.shader = RadialGradient(cx, cy, r * 1.8f, 0x22FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
+            val glowR = r * 1.8f
+            if (glowShader == null || glowRadius != glowR) {
+                glowShader = RadialGradient(cx, cy, glowR, 0x22FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
+                glowRadius = glowR
+            }
+            glow.shader = glowShader
             canvas.drawCircle(cx, cy, r * 1.8f, glow)
             for (i in 0..1) {
                 val p = (phase + i * 0.5f) % 1f

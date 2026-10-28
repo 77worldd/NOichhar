@@ -16,6 +16,7 @@ import com.noichhar.app.blocker.BlocklistManager
 import com.noichhar.app.blocker.BlocklistUpdateWorker
 import com.noichhar.app.database.NOichharDatabase
 import com.noichhar.app.service.FirewallManager
+import com.noichhar.app.stats.QueryLogWriter
 import com.noichhar.app.stats.TrafficTracker
 import com.noichhar.app.stats.StatsPruneWorker
 import com.noichhar.app.util.Constants
@@ -39,6 +40,9 @@ class NOichharApp : Application() {
     lateinit var trafficTracker: TrafficTracker
         private set
 
+    lateinit var queryLogWriter: QueryLogWriter
+        private set
+
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
@@ -51,6 +55,7 @@ class NOichharApp : Application() {
         )
         blocklistManager = BlocklistManager(this, database)
         trafficTracker = TrafficTracker(this)
+        queryLogWriter = QueryLogWriter(database, applicationScope)
         createNotificationChannel()
         scheduleBlocklistUpdates()
         scheduleStatsPruning()

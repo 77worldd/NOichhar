@@ -46,6 +46,22 @@ object Constants {
     const val DNS_CACHE_BATCH_SIZE = 50
     const val DNS_LOG_FLUSH_INTERVAL_MS = 5000L
 
+    // Battery: DNS and connection rows are queued in memory and written in batches
+    // instead of one Room transaction per query, which was the largest wake-up
+    // source while browsing. A flush also happens whenever the queue fills up.
+    const val LOG_BATCH_FLUSH_INTERVAL_MS = 2_000L
+    const val LOG_BATCH_SIZE = 120
+    const val LOG_QUEUE_LIMIT = 4_000
+    const val LOG_PRUNE_INTERVAL_MS = 10 * 60 * 1000L
+    const val NOTIFICATION_MIN_INTERVAL_MS = 15_000L
+
+    // Battery: sampling budget for the traffic tracker. Live rates are only needed
+    // while a screen is visible; per-app usage history is sampled far more rarely.
+    const val TRAFFIC_TICK_UI_MS = 2_000L
+    const val TRAFFIC_TICK_IDLE_MS = 30_000L
+    const val TRAFFIC_SNAPSHOT_UI_MS = 30_000L
+    const val TRAFFIC_SNAPSHOT_IDLE_MS = 300_000L
+
     const val MAX_LOG_ENTRIES = 10000
     const val LOG_PRUNE_INTERVAL = 50L
     const val DNS_CACHE_SIZE = 2000

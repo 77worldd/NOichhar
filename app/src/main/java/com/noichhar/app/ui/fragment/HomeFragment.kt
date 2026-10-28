@@ -95,9 +95,16 @@ class HomeFragment : Fragment() {
         )
         NOichharVpnService.syncConnectionState()
         render(VpnStateStore.current)
+        // Live throughput is only needed while this screen is on display; telling the
+        // tracker keeps the CPU idle in the background instead of polling every 2 s.
+        NOichharApp.instance.trafficTracker.onUiVisible()
     }
 
-    override fun onStop() { runCatching { requireContext().unregisterReceiver(receiver) }; super.onStop() }
+    override fun onStop() {
+        runCatching { requireContext().unregisterReceiver(receiver) }
+        NOichharApp.instance.trafficTracker.onUiHidden()
+        super.onStop()
+    }
 
     override fun onResume() { super.onResume(); NOichharVpnService.syncConnectionState() }
 

@@ -26,6 +26,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Device-wide rates come from TrafficStats. Per-UID bytes come from Android's
@@ -54,6 +55,25 @@ class TrafficTracker(private val context: Context) {
     private val _coverage = MutableStateFlow(Coverage())
     val coverage = _coverage.asStateFlow()
 
+    /**
+     * Number of screens currently showing traffic data. When nobody is looking, the
+     * tracker stops sampling byte rates and drops per-app snapshots to a slow timer:
+     * a VPN left on overnight should cost close to nothing beyond DNS interception.
+     */
+    private val uiConsumers = AtomicInteger(0)
+
+    @Volatile
+    private var snapshotNow = false
+
+    fun onUiVisible() {
+        // Ask for a fresh sample on the next tick so a reopened screen is never stale.
+        if (uiConsumers.incrementAndGet() == 1) snapshotNow = true
+    }
+
+    fun onUiHidden() {
+        if (uiConsumers.decrementAndGet() < 0) uiConsumers.set(0)
+    }
+
     fun start() {
         if (job?.isActive == true) return
         baselines.clear()
@@ -65,18 +85,32 @@ class TrafficTracker(private val context: Context) {
             var lastSnapshot = 0L
             var lastPrune = 0L
             while (isActive) {
+                val uiVisible = uiConsumers.get() > 0
                 val tick = SystemClock.elapsedRealtime()
-                val down = TrafficStats.getTotalRxBytes()
-                val up = TrafficStats.getTotalTxBytes()
-                val elapsed = (tick - lastTick).coerceAtLeast(1L)
-                val downRate = if (down >= 0 && lastDown >= 0 && down >= lastDown)
-                    (down - lastDown) * 1000L / elapsed else null
-                val upRate = if (up >= 0 && lastUp >= 0 && up >= lastUp)
-                    (up - lastUp) * 1000L / elapsed else null
-                _rates.value = Rates(downRate, upRate)
-                lastDown = down; lastUp = up; lastTick = tick
+                if (uiVisible) {
+                    val down = TrafficStats.getTotalRxBytes()
+                    val up = TrafficStats.getTotalTxBytes()
+                    val elapsed = (tick - lastTick).coerceAtLeast(1L)
+                    val downRate = if (down >= 0 && lastDown >= 0 && down >= lastDown)
+                        (down - lastDown) * 1000L / elapsed else null
+                    val upRate = if (up >= 0 && lastUp >= 0 && up >= lastUp)
+                        (up - lastUp) * 1000L / elapsed else null
+                    _rates.value = Rates(downRate, upRate)
+                    lastDown = down; lastUp = up
+                } else if (_rates.value != Rates()) {
+                    // Nothing is displaying the waveform; publish an empty sample once
+                    // and stop reading counters until a screen returns.
+                    _rates.value = Rates()
+                    lastDown = TrafficStats.getTotalRxBytes()
+                    lastUp = TrafficStats.getTotalTxBytes()
+                }
+                lastTick = tick
+
                 runCatching { flushEvents() }.onFailure { Logger.e("Could not save request statistics", it) }
-                if (lastSnapshot == 0L || tick - lastSnapshot >= SNAPSHOT_INTERVAL_MS) {
+
+                val snapshotInterval = if (uiVisible) SNAPSHOT_INTERVAL_UI_MS else SNAPSHOT_INTERVAL_IDLE_MS
+                if (snapshotNow || lastSnapshot == 0L || tick - lastSnapshot >= snapshotInterval) {
+                    snapshotNow = false
                     runCatching { snapshotPerApp(startedAt) }
                         .onFailure { Logger.e("Could not read Android network statistics", it) }
                     lastSnapshot = tick
@@ -85,7 +119,7 @@ class TrafficTracker(private val context: Context) {
                     runCatching { dao.deleteOlderThan(System.currentTimeMillis() - RETENTION_MS) }
                     lastPrune = tick
                 }
-                delay(2_000L)
+                delay(if (uiVisible) TICK_UI_MS else TICK_IDLE_MS)
             }
         }
     }
@@ -204,6 +238,9 @@ class TrafficTracker(private val context: Context) {
 
     companion object {
         const val RETENTION_MS = 7L * 24 * 3_600_000L
-        private const val SNAPSHOT_INTERVAL_MS = 30_000L
+        private const val TICK_UI_MS = 2_000L
+        private const val TICK_IDLE_MS = 30_000L
+        private const val SNAPSHOT_INTERVAL_UI_MS = 30_000L
+        private const val SNAPSHOT_INTERVAL_IDLE_MS = 300_000L
     }
 }
